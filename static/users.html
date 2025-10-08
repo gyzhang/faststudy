@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - FastAPI 学习项目</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: #4a5568;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        .nav {
+            background: #2d3748;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .nav a:hover, .nav a.active {
+            background: #4a5568;
+        }
+        .content {
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            margin-bottom: 15px;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #38a169;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        .btn-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #718096;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table th {
+            background: #f7fafc;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        .table tr:hover {
+            background: #f7fafc;
+        }
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #cbd5e0;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .pagination button.active {
+            background: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 FastAPI 学习项目 - 用户管理</h1>
+            <p>完整的 CRUD 操作演示</p>
+        </div>
+        
+        <div class="nav">
+            <a href="/static/index.html">🏠 首页</a>
+            <a href="/static/users.html" class="active">👥 用户管理</a>
+            <a href="/static/items.html">📦 物品管理</a>
+            <a href="/docs" target="_blank">📖 API 文档</a>
+        </div>
+        
+        <div class="content">
+            <!-- 创建用户表单 -->
+            <div class="section">
+                <h2>创建新用户</h2>
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label for="username">用户名:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">邮箱:</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">创建用户</button>
+                </form>
+            </div>
+            
+            <!-- 消息显示区域 -->
+            <div id="messageArea"></div>
+            
+            <!-- 用户列表 -->
+            <div class="section">
+                <h2>用户列表</h2>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索用户...">
+                    <button class="btn btn-secondary" onclick="searchUsers()">搜索</button>
+                    <button class="btn btn-secondary" onclick="loadUsers()">重置</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- 用户数据将通过 JavaScript 动态加载 -->
+                    </tbody>
+                </table>
+                <div class="pagination" id="pagination">
+                    <!-- 分页控件将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+        let currentPage = 1;
+        const pageSize = 10;
+        
+        // 显示消息
+        function showMessage(message, type = 'success') {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 3000);
+        }
+        
+        // 创建用户
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    showMessage(`用户 "${user.username}" 创建成功！`);
+                    e.target.reset();
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    showMessage(`创建失败: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+        
+        // 加载用户列表
+        async function loadUsers(page = 1) {
+            try {
+                const skip = (page - 1) * pageSize;
+                const response = await fetch(`${API_BASE}/users?skip=${skip}&limit=${pageSize}`);
+                const users = await response.json();
+                
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.is_active ? '✅ 激活' : '❌ 禁用'}</td>
+                        <td>${new Date(user.created_at).toLocaleString()}</td>
+                        <td class="actions">
+                            <button class="btn btn-secondary" onclick="editUser(${user.id})">编辑</button>
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id})">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 更新分页
+                updatePagination(page);
+                currentPage = page;
+            } catch (error) {
+                showMessage('加载用户列表失败', 'error');
+            }
+        }
+        
+        // 搜索用户
+        async function searchUsers() {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (!searchTerm.trim()) {
+                loadUsers();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/users`);
+                const users = await response.json();
+                
+                const filteredUsers = users.filter(user => 
+                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = filteredUsers.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.is_active ? '✅ 激活' : '❌ 禁用'}</td>
+                        <td>${new Date(user.created_at).toLocaleString()}</td>
+                        <td class="actions">
+                            <button class="btn btn-secondary" onclick="editUser(${user.id})">编辑</button>
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id})">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // 清空分页
+                document.getElementById('pagination').innerHTML = '';
+            } catch (error) {
+                showMessage('搜索失败', 'error');
+            }
+        }
+        
+        // 编辑用户
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`${API_BASE}/users/${userId}`);
+                const user = await response.json();
+                
+                // 弹出编辑对话框
+                const newUsername = prompt('请输入新的用户名:', user.username);
+                const newEmail = prompt('请输入新的邮箱:', user.email);
+                
+                if (newUsername && newEmail) {
+                    const updateData = {
+                        username: newUsername,
+                        email: newEmail,
+                        password: 'password' // 实际应用中应该让用户输入新密码
+                    };
+                    
+                    const updateResponse = await fetch(`${API_BASE}/users/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    if (updateResponse.ok) {
+                        showMessage('用户信息更新成功！');
+                        loadUsers(currentPage);
+                    } else {
+                        const error = await updateResponse.json();
+                        showMessage(`更新失败: ${error.detail}`, 'error');
+                    }
+                }
+            } catch (error) {
+                showMessage('编辑用户失败', 'error');
+            }
+        }
+        
+        // 删除用户
+        async function deleteUser(userId) {
+            if (confirm('确定要删除这个用户吗？此操作不可恢复。')) {
+                try {
+                    const response = await fetch(`${API_BASE}/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        showMessage('用户删除成功！');
+                        loadUsers(currentPage);
+                    } else {
+                        const error = await response.json();
+                        showMessage(`删除失败: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showMessage('删除用户失败', 'error');
+                }
+            }
+        }
+        
+        // 更新分页控件
+        function updatePagination(currentPage) {
+            const paginationDiv = document.getElementById('pagination');
+            paginationDiv.innerHTML = '';
+            
+            // 简单分页，实际应用中应该从API获取总页数
+            for (let i = 1; i <= 5; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.className = i === currentPage ? 'active' : '';
+                button.onclick = () => loadUsers(i);
+                paginationDiv.appendChild(button);
+            }
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+        });
+    </script>
+</body>
+</html>

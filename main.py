@@ -31,12 +31,9 @@ app.include_router(items.router, prefix="/api/v1", tags=["物品管理"])
 
 @app.get("/", tags=["根路径"])
 async def root():
-    """欢迎页面"""
-    return {
-        "message": "欢迎使用 FastAPI 学习项目！",
-        "docs_url": "/docs",
-        "redoc_url": "/redoc"
-    }
+    """欢迎页面 - 重定向到静态首页"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/static/index.html")
 
 
 @app.get("/health", tags=["健康检查"])
