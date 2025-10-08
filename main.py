@@ -4,6 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from routers import users, items
 from config import settings
+from models.database import init_db
+
+# 初始化数据库
+init_db()
 
 # 创建 FastAPI 应用实例
 app = FastAPI(

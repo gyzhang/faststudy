@@ -1,86 +1,91 @@
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from sqlalchemy.orm import Session
 from typing import List
-from models.schemas import User, UserCreate
-from datetime import datetime
+from models.database import get_db
+from models.schemas import UserCreate, UserResponse, UserUpdate
+from models.database import User
 
 router = APIRouter()
 
-# 模拟数据库
-fake_users_db = {}
-user_id_counter = 1
-
-
-@router.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate):
-    """创建新用户"""
-    global user_id_counter
-    
-    # 检查用户名是否已存在
-    for existing_user in fake_users_db.values():
-        if existing_user["username"] == user.username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="用户名已存在"
-            )
-    
-    user_dict = user.model_dump()
-    user_dict["id"] = user_id_counter
-    user_dict["is_active"] = True
-    user_dict["created_at"] = datetime.now()
-    user_dict.pop("password")  # 不返回密码
-    
-    fake_users_db[user_id_counter] = user_dict
-    user_id_counter += 1
-    
-    return user_dict
-
-
-@router.get("/users", response_model=List[User])
+@router.get("/users", response_model=List[UserResponse])
 async def get_users(
     skip: int = Query(0, ge=0, description="跳过的记录数"),
-    limit: int = Query(10, ge=1, le=100, description="返回的最大记录数")
+    limit: int = Query(10, ge=1, le=100, description="返回的最大记录数"),
+    db: Session = Depends(get_db)
 ):
     """获取用户列表（支持分页）"""
-    users = list(fake_users_db.values())
-    return users[skip : skip + limit]
+    users = db.query(User).filter(User.is_active == True).offset(skip).limit(limit).all()
+    return users
 
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    """创建新用户"""
+    # 检查用户名是否已存在
+    existing_user = db.query(User).filter(User.username == user.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户名已存在"
+        )
+    
+    # 检查邮箱是否已存在
+    existing_email = db.query(User).filter(User.email == user.email).first()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="邮箱已存在"
+        )
+    
+    # 创建新用户
+    db_user = User(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
-@router.get("/users/{user_id}", response_model=User)
-async def get_user(user_id: int):
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
     """根据ID获取用户信息"""
-    if user_id not in fake_users_db:
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="用户不存在"
         )
-    return fake_users_db[user_id]
+    return user
 
-
-@router.put("/users/{user_id}", response_model=User)
-async def update_user(user_id: int, user: UserCreate):
+@router.put("/users/{user_id}", response_model=UserResponse)
+async def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     """更新用户信息"""
-    if user_id not in fake_users_db:
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="用户不存在"
         )
     
-    user_dict = user.model_dump()
-    user_dict["id"] = user_id
-    user_dict["is_active"] = fake_users_db[user_id]["is_active"]
-    user_dict["created_at"] = fake_users_db[user_id]["created_at"]
-    user_dict.pop("password")
+    # 更新字段
+    update_data = user_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
     
-    fake_users_db[user_id] = user_dict
-    return user_dict
-
+    db.commit()
+    db.refresh(user)
+    return user
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int):
-    """删除用户"""
-    if user_id not in fake_users_db:
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """软删除用户（设置为非活跃状态）"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="用户不存在"
         )
-    del fake_users_db[user_id]
+    
+    user.is_active = False
+    db.commit()

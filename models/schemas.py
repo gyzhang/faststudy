@@ -1,47 +1,59 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional
+"""
+Pydantic模型定义
+用于请求和响应数据验证
+"""
+
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
 from datetime import datetime
 
-
+# 用户相关的Pydantic模型
 class UserBase(BaseModel):
-    """用户基础模型"""
-    username: str = Field(..., min_length=3, max_length=50, description="用户名")
-    email: EmailStr = Field(..., description="邮箱地址")
-    full_name: Optional[str] = Field(None, max_length=100, description="全名")
-
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
 
 class UserCreate(UserBase):
-    """创建用户模型"""
-    password: str = Field(..., min_length=6, description="密码")
-
-
-class User(UserBase):
-    """用户响应模型"""
-    id: int = Field(..., description="用户ID")
-    is_active: bool = Field(True, description="是否激活")
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
-
-    class Config:
-        from_attributes = True
-
-
-class ItemBase(BaseModel):
-    """物品基础模型"""
-    name: str = Field(..., min_length=1, max_length=100, description="物品名称")
-    description: Optional[str] = Field(None, max_length=500, description="物品描述")
-    price: float = Field(..., gt=0, description="价格")
-    tax: Optional[float] = Field(None, ge=0, description="税费")
-
-
-class ItemCreate(ItemBase):
-    """创建物品模型"""
     pass
 
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
 
-class Item(ItemBase):
-    """物品响应模型"""
-    id: int = Field(..., description="物品ID")
-    owner_id: int = Field(..., description="拥有者ID")
-
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    
     class Config:
         from_attributes = True
+
+# 物品相关的Pydantic模型
+class ItemBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+
+class ItemCreate(ItemBase):
+    owner_id: int
+
+class ItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+
+class ItemResponse(ItemBase):
+    id: int
+    owner_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# 包含关系的响应模型
+class UserWithItems(UserResponse):
+    items: List[ItemResponse] = []
+
+class ItemWithOwner(ItemResponse):
+    owner: UserResponse
