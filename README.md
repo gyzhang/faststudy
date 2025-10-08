@@ -14,6 +14,7 @@
 - ✅ **错误处理** - 统一的异常处理
 - ✅ **配置管理** - 使用环境变量管理配置
 - ✅ **Jupyter Notebook 支持** - 集成开发环境，便于学习和调试
+- ✅ **Web 界面** - 完整的 CRUD 操作页面，支持用户和物品管理
 
 ## 🚀 快速开始
 
@@ -74,13 +75,32 @@ python main.py
 
 ### 3. 访问应用
 
-- **应用首页**: http://127.0.0.1:8000/static/index.html
+- **应用首页**: http://127.0.0.1:8000 (自动重定向到静态首页)
+- **用户管理界面**: http://127.0.0.1:8000/static/users.html
+- **物品管理界面**: http://127.0.0.1:8000/static/items.html
 - **Swagger UI 文档**: http://127.0.0.1:8000/docs
 - **ReDoc 文档**: http://127.0.0.1:8000/redoc
 - **健康检查**: http://127.0.0.1:8000/health
 - **Jupyter Notebook**: http://localhost:8888 (启动后访问)
 
-### 4. 启动 Jupyter Notebook
+### 4. Web 界面功能
+
+项目提供了完整的 Web 操作界面：
+
+**用户管理功能**:
+- ✅ 创建新用户
+- ✅ 查看用户列表（支持分页）
+- ✅ 搜索用户
+- ✅ 编辑用户信息
+- ✅ 删除用户
+
+**物品管理功能**:
+- ✅ 创建新物品
+- ✅ 查看物品列表（支持搜索和分页）
+- ✅ 编辑物品信息
+- ✅ 删除物品（包含权限验证）
+
+### 5. 启动 Jupyter Notebook
 
 项目已集成 Jupyter Notebook，便于代码学习和调试：
 
@@ -98,7 +118,7 @@ Notebook 将自动使用项目的虚拟环境，可以访问所有已安装的�
 
 ```
 faststudy/
-├── main.py                 # 应用入口文件
+├── main.py                 # 应用入口文件（包含根路径重定向）
 ├── config.py               # 配置管理
 ├── pyproject.toml          # Poetry 配置和依赖管理
 ├── .env                    # 环境变量配置
@@ -110,7 +130,9 @@ faststudy/
 │   ├── users.py            # 用户相关路由
 │   └── items.py            # 物品相关路由
 └── static/                 # 静态文件
-    └── index.html          # 欢迎页面
+    ├── index.html          # 欢迎页面
+    ├── users.html          # 用户管理界面
+    └── items.html          # 物品管理界面
 ```
 
 ## 🔧 API 端点
