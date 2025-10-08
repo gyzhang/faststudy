@@ -122,8 +122,10 @@ faststudy/
 ├── config.py               # 配置管理
 ├── pyproject.toml          # Poetry 配置和依赖管理
 ├── .env                    # 环境变量配置
+├── faststudy.db           # SQLite 数据库文件
 ├── models/                 # 数据模型
 │   ├── __init__.py
+│   ├── database.py         # 数据库配置和模型定义
 │   └── schemas.py          # Pydantic 模型定义
 ├── routers/                # 路由模块
 │   ├── __init__.py
@@ -303,10 +305,31 @@ print(response.json())
 - [Pydantic 文档](https://docs.pydantic.dev/)
 - [Uvicorn 文档](https://www.uvicorn.org/)
 
+## 🗄️ 数据库配置
+
+项目使用 **SQLite 文件数据库** (`faststudy.db`) 进行数据持久化存储：
+
+### 数据库特性
+- ✅ **数据持久化** - 重启服务后数据不会丢失
+- ✅ **多线程安全** - 配置了 `check_same_thread=False` 解决线程问题
+- ✅ **自动初始化** - 启动时自动创建表和测试数据
+- ✅ **SQLAlchemy ORM** - 使用 SQLAlchemy 进行数据库操作
+
+### 数据库模型
+- **用户表 (users)** - 存储用户信息，包含用户名、邮箱、状态等字段
+- **物品表 (items)** - 存储物品信息，包含名称、描述、价格等字段，与用户表关联
+
+### 权限控制
+项目实现了基础的权限控制：
+- 用户只能修改和删除自己拥有的物品
+- 使用依赖注入模拟用户认证
+- 返回适当的 HTTP 状态码（403 Forbidden）表示权限不足
+
 ## ⚡ 提示
 
-- 所有数据目前存储在内存中（字典），重启后会丢失
-- 这是一个学习项目，实际生产环境需要使用真实数据库
+- 这是一个学习项目，展示了 FastAPI 的核心功能和最佳实践
+- 实际生产环境建议使用更强大的数据库（如 PostgreSQL）
 - 密码处理过于简单，实际应用需要加密存储
+- 认证系统为模拟实现，实际应用需要完整的认证流程
 
 祝学习愉快！🎉
