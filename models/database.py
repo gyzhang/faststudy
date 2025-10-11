@@ -73,6 +73,52 @@ def init_db():
     finally:
         db.close()
 
+def reset_db():
+    """强制重置数据库并插入扩充测试数据（用户10条、物品30条）"""
+    # 关闭现有连接，确保可安全重置
+    try:
+        engine.dispose()
+    except Exception:
+        pass
+
+    # 删除并重建所有表
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        # 创建 10 个测试用户
+        base_users = [
+            ("john_doe", "john@example.com", "John Doe"),
+            ("jane_smith", "jane@example.com", "Jane Smith"),
+            ("alice_wang", "alice@example.com", "Alice Wang"),
+            ("bob_lee", "bob@example.com", "Bob Lee"),
+            ("charlie_zhang", "charlie@example.com", "Charlie Zhang"),
+            ("david_liu", "david@example.com", "David Liu"),
+            ("eva_chen", "eva@example.com", "Eva Chen"),
+            ("frank_zhao", "frank@example.com", "Frank Zhao"),
+            ("grace_lin", "grace@example.com", "Grace Lin"),
+            ("henry_guo", "henry@example.com", "Henry Guo"),
+        ]
+        users = []
+        for u in base_users:
+            user = User(username=u[0], email=u[1], full_name=u[2])
+            db.add(user)
+            users.append(user)
+        db.commit()  # 获取用户ID
+
+        # 创建 30 个测试物品（每个用户 3 件）
+        for idx, user in enumerate(users):
+            for j in range(1, 4):
+                name = f"测试物品{idx+1}-{j}"
+                description = f"这是为用户 {user.username} 生成的第 {j} 个测试物品"
+                price = round(99.0 + (idx * 10) + j * 3.5, 2)
+                db.add(Item(name=name, description=description, price=price, owner_id=user.id))
+        db.commit()
+        print("数据库已重置：创建 10 个用户、30 个物品")
+    finally:
+        db.close()
+
 def get_db():
     """获取数据库会话"""
     db = SessionLocal()
@@ -82,33 +128,46 @@ def get_db():
         db.close()
 
 def init_db():
-    """初始化数据库并创建测试数据"""
+    """初始化数据库并创建测试数据（扩充：用户10条、物品30条）"""
     Base.metadata.create_all(bind=engine)
-    
-    # 创建初始数据
+
     db = SessionLocal()
     try:
-        # 检查是否已有数据
         existing_users = db.query(User).count()
         if existing_users == 0:
-            # 创建测试用户
-            user1 = User(username="john_doe", email="john@example.com", full_name="John Doe")
-            user2 = User(username="jane_smith", email="jane@example.com", full_name="Jane Smith")
-            
-            db.add(user1)
-            db.add(user2)
+            # 创建 10 个测试用户
+            base_users = [
+                ("john_doe", "john@example.com", "John Doe"),
+                ("jane_smith", "jane@example.com", "Jane Smith"),
+                ("alice_wang", "alice@example.com", "Alice Wang"),
+                ("bob_lee", "bob@example.com", "Bob Lee"),
+                ("charlie_zhang", "charlie@example.com", "Charlie Zhang"),
+                ("david_liu", "david@example.com", "David Liu"),
+                ("eva_chen", "eva@example.com", "Eva Chen"),
+                ("frank_zhao", "frank@example.com", "Frank Zhao"),
+                ("grace_lin", "grace@example.com", "Grace Lin"),
+                ("henry_guo", "henry@example.com", "Henry Guo"),
+            ]
+            users = []
+            for u in base_users:
+                user = User(username=u[0], email=u[1], full_name=u[2])
+                db.add(user)
+                users.append(user)
+            db.commit()  # 提交以获取用户ID
+
+            # 创建 30 个测试物品（每个用户分配 3 件物品）
+            items_to_create = []
+            for idx, user in enumerate(users):
+                for j in range(1, 4):
+                    name = f"测试物品{idx+1}-{j}"
+                    description = f"这是为用户 {user.username} 生成的第 {j} 个测试物品"
+                    # 简单的价格分布
+                    price = round(99.0 + (idx * 10) + j * 3.5, 2)
+                    items_to_create.append(Item(name=name, description=description, price=price, owner_id=user.id))
+            for item in items_to_create:
+                db.add(item)
             db.commit()
-            
-            # 创建测试物品
-            item1 = Item(name="笔记本电脑", description="高性能笔记本电脑", price=5999.99, owner_id=user1.id)
-            item2 = Item(name="智能手机", description="最新款智能手机", price=3999.50, owner_id=user1.id)
-            item3 = Item(name="平板电脑", description="便携式平板", price=1999.00, owner_id=user2.id)
-            
-            db.add(item1)
-            db.add(item2)
-            db.add(item3)
-            db.commit()
-            print("数据库初始化完成，已创建测试数据")
+            print("数据库初始化完成：已创建 10 个用户、30 个物品")
         else:
             print("数据库已存在，跳过初始化")
     finally:
