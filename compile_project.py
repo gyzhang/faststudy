@@ -30,7 +30,7 @@ def compile_project(source_dir: str, output_dir: str) -> None:
     # 定义要排除的目录和文件列表
     excluded_dirs = [
         '.git', '.venv', '__pycache__', '.pytest_cache', 
-        'node_modules', 'reports', 'tests', 
+        'node_modules', 'reports', 'tests', 'doc', 
         '.idea', '.trae',  # 添加.idea和.trae目录到排除列表
         os.path.basename(output_dir)  # 避免递归创建compiled目录
     ]
@@ -38,7 +38,7 @@ def compile_project(source_dir: str, output_dir: str) -> None:
     # 定义要排除的文件列表
     excluded_files = [
         '.gitignore', 'compile_project.pyc', 'verify_compiled_code.pyc',
-        'package.json', 'package-lock.json', 'pyproject.toml', 'poetry.lock', 'pytest.ini'
+        'package.json', 'package-lock.json', 'poetry.lock', 'pytest.ini'
     ]
     
     print(f"将排除以下开发环境目录: {', '.join(excluded_dirs)}")

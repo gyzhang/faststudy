@@ -1,6 +1,8 @@
-# FastStudy (Windows 环境指南)
+# FastStudy-用AI写的Python学习项目
 
-本项目为 FastAPI 学习项目，演示常用功能（静态资源、路由、数据库、分页、依赖注入等）。本指南仅针对 Windows 环境（建议使用 PowerShell 7）。
+本项目为 FastAPI 学习项目，演示常用功能（静态资源、路由、数据库、分页、依赖注入等）。
+
+本指南仅针对 Windows 环境（建议使用 PowerShell 7）。
 
 ## 一、准备环境（必须先安装）
 
@@ -62,7 +64,7 @@ poetry run uvicorn main:app --reload
 - 首页: http://127.0.0.1:8000/
 - 文档: http://127.0.0.1:8000/docs
 
-## 四、快速接口测试（PowerShell）
+## 四、快速接口测试
 
 ```powershell
 # 健康检查
@@ -82,6 +84,8 @@ irm "http://127.0.0.1:8000/api/v1/items?skip=0&limit=10"
 $item = @{ name="Sample Item"; description="demo"; price=9.99; owner_id=1 } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/items" -Method Post -ContentType "application/json" -Body $item
 ```
+
+> 在 Windows 11 下使用 PowerShell 进行快速接口测试。
 
 ## 五、数据库初始化与重置
 
@@ -105,7 +109,7 @@ $u = irm "http://127.0.0.1:8000/api/v1/users?limit=100"; "users: $($u.Count)"
 $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
 ```
 
-## 六、常见问题排查（Windows）
+## 六、常见问题排查
 
 - 页面打不开或连接被拒绝
   - 确保服务已启动并在日志中显示 `Uvicorn running on http://127.0.0.1:8000`
@@ -129,9 +133,8 @@ $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
 - `test_users_page.py`：用户管理页面的自动化测试
 - `test_items_page.py`：物品管理页面的自动化测试
 
-**测试先决条件：**
+**测试先决条件，**自动化测试需要以下环境：
 
-自动化测试需要以下环境：
 - Node.js（最新LTS版本）
 - npm依赖（包含Playwright）
 - Playwright浏览器
@@ -151,7 +154,7 @@ poetry run pytest tests/
 
 测试报告将生成在 `reports/test_report.html` 文件中，可以使用浏览器打开查看详细的测试结果，包括测试总数、通过/失败情况、执行时间等信息。
 
-## 八、项目结构（简要）
+## 八、项目结构
 
 - main.py：应用入口与路由挂载、静态资源
 - routers/：用户与物品相关路由
