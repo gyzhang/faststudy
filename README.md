@@ -6,12 +6,12 @@
 
 1) 安装微软 Visual C++ Build Tools
 - 打开: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-- 下载并运行 “Build Tools for Visual Studio”
+- 下载并运行 "Build Tools for Visual Studio"
 - 在安装界面勾选:
-  - “Desktop development with C++”
-  - “MSVC v143 - VS 2022 C++ x64/x86 build tools”（版本号可能略有不同）
-  - “Windows 11 SDK”（或与你系统版本匹配的 SDK）
-- 点击 “安装” 或 “修改”，等待完成（可能需要数 GB）
+  - "Desktop development with C++"
+  - "MSVC v143 - VS 2022 C++ x64/x86 build tools"（版本号可能略有不同）
+  - "Windows 11 SDK"（或与你系统版本匹配的 SDK）
+- 点击 "安装" 或 "修改"，等待完成（可能需要数 GB）
 - 完成后重启电脑
 
 2) 安装 Rust 开发环境
@@ -21,7 +21,7 @@
 - 安装后关闭并重新打开命令行窗口，使环境变量生效
 
 3) 安装 Python 与 PowerShell（建议）
-- Python 版本：3.11 或更高（64 位）
+- Python 版本：3.14（64 位）
 - 终端建议：PowerShell 7（https://aka.ms/PSWindows）
 
 ## 二、获取项目并安装依赖
@@ -46,12 +46,9 @@ poetry --version
 poetry install
 ```
 
-如遇 `ModuleNotFoundError: sqlalchemy` 或类似缺失，请执行：
-```powershell
-poetry add sqlalchemy
-```
-
 ## 三、启动服务
+
+**注意：请严格使用以下命令启动项目：**
 
 ```powershell
 poetry run uvicorn main:app --reload
@@ -122,8 +119,8 @@ $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
   - 按前述步骤安装 Rust，并重启命令行窗口
 
 - 依赖安装异常
-  - 尝试 `poetry install`，以及补齐缺失的包（如 `poetry add sqlalchemy`）
-  - 使用 64 位 Python 3.11+，避免混杂多版本 Python
+  - 尝试 `poetry install`，确保安装完整依赖
+  - 使用 64 位 Python 3.14，避免混杂多版本 Python
 
 ## 七、项目结构（简要）
 
