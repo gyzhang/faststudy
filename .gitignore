@@ -33,10 +33,14 @@ poetry.lock
 *.swp
 *.swo
 *~
+.trae/
 
 # Environment
 .env.local
 .env.*.local
+
+# Database
+faststudy.db
 
 # OS
 .DS_Store
