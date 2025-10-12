@@ -122,15 +122,47 @@ $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
   - 尝试 `poetry install`，确保安装完整依赖
   - 使用 64 位 Python 3.14，避免混杂多版本 Python
 
-## 七、项目结构（简要）
+## 七、自动化测试
+
+项目包含完整的自动化测试套件，使用 Playwright 和 Pytest 实现，支持生成HTML格式的测试报告。测试文件位于 `tests/` 目录下：
+
+- `test_users_page.py`：用户管理页面的自动化测试
+- `test_items_page.py`：物品管理页面的自动化测试
+
+### 测试先决条件
+
+自动化测试需要以下环境：
+- Node.js（最新LTS版本）
+- npm依赖（包含Playwright）
+- Playwright浏览器
+- pytest-html（用于生成HTML格式的测试报告）
+
+具体安装步骤请参考 `AUTOMATED_TESTING_GUIDE.md` 文件。
+
+**运行测试前请确保服务已启动**，然后在另一个终端中执行以下命令运行测试并生成HTML格式的测试报告：
+
+```powershell
+# 执行测试并生成HTML格式的测试报告
+poetry run pytest tests/ -v --html=reports/test_report.html --self-contained-html
+
+# 或使用配置文件（简化命令）
+poetry run pytest tests/
+```
+
+测试报告将生成在 `reports/test_report.html` 文件中，可以使用浏览器打开查看详细的测试结果，包括测试总数、通过/失败情况、执行时间等信息。
+
+## 八、项目结构（简要）
 
 - main.py：应用入口与路由挂载、静态资源
 - routers/：用户与物品相关路由
 - models/：SQLAlchemy 模型与数据库初始化/重置
 - static/：静态资源（首页、图标等）
 - config.py：应用配置（HOST、PORT 等）
+- tests/：自动化测试文件
 - pyproject.toml：Poetry 项目配置与依赖
 
-## 八、许可证
+## 九、许可证
 
 MIT License
+
+Copyright (c) 2025 Kevin Zhang <xprogrammer@163.com>
