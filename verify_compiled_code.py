@@ -1,5 +1,6 @@
 import sys
 import os
+import sys
 import importlib.util
 
 # 添加compiled目录到Python路径
@@ -75,6 +76,26 @@ def verify_module(module_name):
         traceback.print_exc()
         return False
 
+def check_compiled_directory():
+    """检查compiled目录是否包含不应该存在的开发环境文件"""
+    print("\n=== 检查compiled目录结构 ===")
+    
+    # 定义不应该在compiled目录中存在的目录
+    forbidden_dirs = ['.venv', 'tests', '__pycache__', '.pytest_cache', 'node_modules', 'reports']
+    
+    has_forbidden_files = False
+    
+    for root, dirs, _ in os.walk('compiled'):
+        for dir_name in forbidden_dirs:
+            if dir_name in dirs:
+                print(f"⚠️ 发现不应该存在的开发环境目录: {os.path.join(root, dir_name)}")
+                has_forbidden_files = True
+    
+    if not has_forbidden_files:
+        print("✅ compiled目录不包含任何开发环境相关的目录")
+    
+    return not has_forbidden_files
+
 if __name__ == '__main__':
     print("=== 编译代码验证测试 ===")
     
@@ -83,6 +104,9 @@ if __name__ == '__main__':
         print("❌ compiled目录不存在")
         sys.exit(1)
     
+    # 检查compiled目录结构
+    directory_valid = check_compiled_directory()
+    
     all_modules_verified = True
     
     for module_name in modules_to_verify:
@@ -90,10 +114,15 @@ if __name__ == '__main__':
             all_modules_verified = False
     
     print(f"\n=== 验证总结 ===")
-    if all_modules_verified:
+    if all_modules_verified and directory_valid:
         print("✅ 所有关键模块验证成功！编译后的代码功能完整。")
+        print("✅ compiled目录结构符合要求，不包含开发环境文件。")
         print("\n结论：项目可以在不发布源代码的情况下，仅发布compiled目录中的.pyc文件和静态资源文件进行部署。")
     else:
-        print("❌ 部分模块验证失败，请查看详细错误信息。")
+        if not all_modules_verified:
+            print("❌ 部分模块验证失败，请查看详细错误信息。")
+        if not directory_valid:
+            print("❌ compiled目录包含不应该存在的开发环境文件。")
+        print("\n请修复问题后重新编译项目。")
     
-    sys.exit(0 if all_modules_verified else 1)
+    sys.exit(0 if all_modules_verified and directory_valid else 1)

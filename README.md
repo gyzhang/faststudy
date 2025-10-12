@@ -137,7 +137,7 @@ $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
 - Playwright浏览器
 - pytest-html（用于生成HTML格式的测试报告）
 
-具体安装步骤请参考 `AUTOMATED_TESTING_GUIDE.md` 文件。
+具体安装步骤请参考 `doc/AUTOMATED_TESTING_GUIDE.md` 文件。
 
 **运行测试前请确保服务已启动**，然后在另一个终端中执行以下命令运行测试并生成HTML格式的测试报告：
 
@@ -159,6 +159,7 @@ poetry run pytest tests/
 - static/：静态资源（首页、图标等）
 - config.py：应用配置（HOST、PORT 等）
 - tests/：自动化测试文件
+- doc/：项目文档文件（测试指南、发布指南等）
 - pyproject.toml：Poetry 项目配置与依赖
 
 ## 九、项目发布
@@ -215,7 +216,7 @@ poetry run python -m uvicorn --app-dir=compiled main:app --reload
 
 ### 9.4 详细信息
 
-关于项目发布的更多详细信息，请参考`PROJECT_RELEASE_GUIDE.md`文件，其中包含编译原理、增强安全性建议和完整发布流程。
+关于项目发布的更多详细信息，请参考`doc/PROJECT_RELEASE_GUIDE.md`文件，其中包含编译原理、增强安全性建议和完整发布流程。
 
 ## 十、许可证
 

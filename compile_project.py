@@ -27,19 +27,36 @@ def compile_project(source_dir: str, output_dir: str) -> None:
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
     
-    # 复制项目文件结构
+    # 定义要排除的目录和文件列表
+    excluded_dirs = [
+        '.git', '.venv', '__pycache__', '.pytest_cache', 
+        'node_modules', 'reports', 'tests', 
+        '.idea', '.trae',  # 添加.idea和.trae目录到排除列表
+        os.path.basename(output_dir)  # 避免递归创建compiled目录
+    ]
+    
+    # 定义要排除的文件列表
+    excluded_files = [
+        '.gitignore', 'compile_project.pyc', 'verify_compiled_code.pyc',
+        'package.json', 'package-lock.json', 'pyproject.toml', 'poetry.lock', 'pytest.ini'
+    ]
+    
+    print(f"将排除以下开发环境目录: {', '.join(excluded_dirs)}")
+    
+    # 复制非Python文件和创建目录结构
     for root, dirs, files in os.walk(source_dir):
-        # 跳过不需要的目录
-        if '.git' in dirs: dirs.remove('.git')
-        if '.venv' in dirs: dirs.remove('.venv')
-        if '__pycache__' in dirs: dirs.remove('__pycache__')
-        if '.pytest_cache' in dirs: dirs.remove('.pytest_cache')
-        if 'node_modules' in dirs: dirs.remove('node_modules')
-        if 'reports' in dirs: dirs.remove('reports')
-        if 'tests' in dirs: dirs.remove('tests')
-        # 跳过输出目录，防止递归创建compiled目录
-        if os.path.basename(output_dir) in dirs and root == source_dir:
-            dirs.remove(os.path.basename(output_dir))
+        # 创建一个列表用于保存需要删除的目录（避免在遍历时修改列表）
+        dirs_to_remove = []
+        
+        # 检查哪些目录需要被排除
+        for dir_name in dirs:
+            if dir_name in excluded_dirs:
+                dirs_to_remove.append(dir_name)
+                print(f"  排除目录: {os.path.join(root, dir_name)}")
+        
+        # 从dirs中移除需要排除的目录
+        for dir_name in dirs_to_remove:
+            dirs.remove(dir_name)
         
         # 创建对应的输出目录
         rel_path = os.path.relpath(root, source_dir)
@@ -49,19 +66,66 @@ def compile_project(source_dir: str, output_dir: str) -> None:
         
         # 复制非Python文件
         for file in files:
+            # 确保文件不是Python文件
             if not file.endswith('.py'):
                 src_file = os.path.join(root, file)
                 dst_file = os.path.join(output_dir, rel_path, file)
-                shutil.copy2(src_file, dst_file)
+                
+                # 检查文件是否在排除目录内或文件名在排除列表中
+                should_copy = True
+                
+                # 检查文件是否在排除目录内
+                for excluded_dir in excluded_dirs:
+                    if excluded_dir in src_file:
+                        should_copy = False
+                        print(f"  排除文件: {src_file}")
+                        break
+                
+                # 检查文件名是否在排除文件列表中
+                if should_copy and file in excluded_files:
+                    should_copy = False
+                    print(f"  排除文件: {src_file}")
+                
+                if should_copy:
+                    shutil.copy2(src_file, dst_file)
     
-    # 编译Python文件为字节码，使用rx参数排除.venv目录
-    import re
-    venv_pattern = re.compile(r'.*\\.venv\\.*')
-    compileall.compile_dir(source_dir, force=True, legacy=True, rx=venv_pattern)
+    # 编译Python文件为字节码
+    # 先创建一个临时目录用于编译
+    import tempfile
+    temp_compile_dir = tempfile.mkdtemp()
+    
+    print("开始编译Python文件为字节码...")
+    
+    try:
+        # 编译所有Python文件到临时目录
+        for root, _, files in os.walk(source_dir):
+            # 检查当前目录是否是排除目录
+            should_compile = True
+            for excluded_dir in excluded_dirs:
+                if excluded_dir in root:
+                    should_compile = False
+                    break
+            
+            if should_compile:
+                for file in files:
+                    if file.endswith('.py'):
+                        src_file = os.path.join(root, file)
+                        # 编译单个文件
+                        compileall.compile_file(src_file, legacy=True)
+    finally:
+        # 不需要清理临时目录，因为我们只需要.pyc文件
+        pass
     
     # 收集编译后的.pyc文件并复制到输出目录
-    for root, dirs, files in os.walk(source_dir):
-        if '__pycache__' in dirs:
+    for root, _, files in os.walk(source_dir):
+        # 检查当前目录是否是排除目录
+        should_collect = True
+        for excluded_dir in excluded_dirs:
+            if excluded_dir in root:
+                should_collect = False
+                break
+        
+        if should_collect and '__pycache__' in os.listdir(root):
             pycache_dir = os.path.join(root, '__pycache__')
             rel_path = os.path.relpath(root, source_dir)
             
