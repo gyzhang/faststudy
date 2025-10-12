@@ -45,5 +45,11 @@ faststudy.db
 .DS_Store
 Thumbs.db
 
+# Compiled output
+compiled/
+
 # Node.js
 node_modules/
+
+# Test reports
+reports/

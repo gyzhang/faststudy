@@ -129,7 +129,7 @@ $it = irm "http://127.0.0.1:8000/api/v1/items?limit=100"; "items: $($it.Count)"
 - `test_users_page.py`：用户管理页面的自动化测试
 - `test_items_page.py`：物品管理页面的自动化测试
 
-### 测试先决条件
+**测试先决条件：**
 
 自动化测试需要以下环境：
 - Node.js（最新LTS版本）
@@ -161,7 +161,63 @@ poetry run pytest tests/
 - tests/：自动化测试文件
 - pyproject.toml：Poetry 项目配置与依赖
 
-## 九、许可证
+## 九、项目发布
+
+### 9.1 发布时隐藏源代码
+
+如果您需要在发布项目时不包含源代码，可以使用项目中提供的编译脚本将Python代码编译为字节码(.pyc)文件。
+
+编译步骤：
+
+```powershell
+# 在项目根目录下执行
+poetry run python compile_project.py
+
+# 可选：创建发布包
+poetry run python compile_project.py --package
+```
+
+编译后的文件将保存在`compiled`目录中，编译后的目录结构包含：
+- 所有必要的配置文件（.env, pyproject.toml, pytest.ini等）
+- 静态资源文件（static/目录）
+- 文档文件（README.md, TESTING_GUIDE.md等）
+- 编译后的Python字节码文件（以.pyc格式存在）
+
+编译过程会移除源代码文件，仅保留编译后的字节码文件，提高代码安全性。
+
+### 9.2 验证编译后的代码
+
+项目提供了一个验证脚本来确保编译后的代码功能完整：
+
+```powershell
+# 在项目根目录下执行验证
+poetry run python verify_compiled_code.py
+```
+
+验证脚本会检查以下关键模块是否正常工作：
+- 数据库模块（models.database）
+- 数据模型（models.schemas）
+- 路由模块（routers.items, routers.users）
+- 主应用模块（main）
+
+如果所有模块验证成功，输出将显示"所有关键模块验证成功！编译后的代码功能完整。"
+
+### 9.3 运行编译后的项目
+
+编译后的项目可以在项目根目录下使用Python模块方式运行：
+
+```powershell
+# 在项目根目录下运行服务
+poetry run python -m uvicorn --app-dir=compiled main:app --reload
+```
+
+编译后的项目不需要源代码文件即可正常运行，功能与原始项目完全一致。
+
+### 9.4 详细信息
+
+关于项目发布的更多详细信息，请参考`PROJECT_RELEASE_GUIDE.md`文件，其中包含编译原理、增强安全性建议和完整发布流程。
+
+## 十、许可证
 
 MIT License
 
