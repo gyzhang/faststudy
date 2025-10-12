@@ -33,7 +33,6 @@ poetry.lock
 *.swp
 *.swo
 *~
-.trae/
 
 # Environment
 .env.local
