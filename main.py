@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from routers import users, items
+from routers import users, items, llm
 from config import settings
 from models.database import init_db
 
@@ -31,6 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # 包含路由
 app.include_router(users.router, prefix="/api/v1", tags=["用户管理"])
 app.include_router(items.router, prefix="/api/v1", tags=["物品管理"])
+app.include_router(llm.router, prefix="/api/v1", tags=["LLM 服务"])
 
 
 @app.get("/", tags=["根路径"])
