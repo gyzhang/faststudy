@@ -309,4 +309,4 @@ Copyright (c) 2025 Kevin Zhang <xprogrammer@163.com>
 
 如有问题或建议，请联系：
 - Email: xprogrammer@163.com
-- GitHub: https://github.com/yourusername/faststudy
+- GitHub: https://github.com/gyzhang/faststudy
