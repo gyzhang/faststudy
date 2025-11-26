@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from models.database import get_db
-from models.schemas import ItemCreate, ItemResponse, ItemUpdate
+from models.schemas import ItemCreate, ItemResponse, ItemUpdate, PaginatedResponse
 from models.database import Item, User
 
 router = APIRouter()
@@ -43,10 +43,10 @@ async def create_item(
     return db_item
 
 
-@router.get("/items", response_model=List[ItemResponse])
+@router.get("/items", response_model=PaginatedResponse[ItemResponse])
 async def get_items(
-    skip: int = Query(0, ge=0, description="跳过的记录数"),
-    limit: int = Query(10, ge=1, le=100, description="返回的最大记录数"),
+    page: int = Query(1, ge=1, description="当前页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页记录数"),
     search: Optional[str] = Query(None, description="搜索关键词"),
     db: Session = Depends(get_db)
 ):
@@ -60,8 +60,26 @@ async def get_items(
             (Item.description.ilike(f"%{search}%"))
         )
     
-    items = query.offset(skip).limit(limit).all()
-    return items
+    # 计算总记录数
+    total = query.count()
+    
+    # 计算总页数
+    total_pages = (total + page_size - 1) // page_size
+    
+    # 计算跳过的记录数
+    skip = (page - 1) * page_size
+    
+    # 查询数据
+    items = query.offset(skip).limit(page_size).all()
+    
+    # 返回包含分页信息的响应
+    return PaginatedResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        data=items
+    )
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)

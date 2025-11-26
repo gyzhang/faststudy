@@ -4,8 +4,23 @@ Pydantic模型定义
 """
 
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar
 from datetime import datetime
+
+# 定义泛型类型变量
+T = TypeVar('T')
+
+# 通用分页响应模型
+class PaginatedResponse(BaseModel, Generic[T]):
+    """通用分页响应模型"""
+    total: int          # 总记录数
+    page: int           # 当前页码
+    page_size: int      # 每页大小
+    total_pages: int    # 总页数
+    data: List[T]       # 数据列表
+    
+    class Config:
+        from_attributes = True
 
 # 用户相关的Pydantic模型
 class UserBase(BaseModel):

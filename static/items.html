@@ -309,9 +309,9 @@
         // 加载物品列表
         async function loadItems(page = 1) {
             try {
-                const skip = (page - 1) * pageSize;
-                const response = await fetch(`${API_BASE}/items?skip=${skip}&limit=${pageSize}`);
-                const items = await response.json();
+                const response = await fetch(`${API_BASE}/items?page=${page}&page_size=${pageSize}`);
+                const result = await response.json();
+                const items = result.data; // 从新的响应格式中获取物品数据
                 
                 const tbody = document.getElementById('itemsTableBody');
                 tbody.innerHTML = items.map(item => `
@@ -329,7 +329,7 @@
                 `).join('');
                 
                 // 更新分页
-                updatePagination(page);
+                updatePagination(page, result.total_pages); // 使用API返回的总页数
                 currentPage = page;
             } catch (error) {
                 showMessage('加载物品列表失败', 'error');
@@ -345,8 +345,9 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/items?search=${encodeURIComponent(searchTerm)}`);
-                const items = await response.json();
+                const response = await fetch(`${API_BASE}/items?page=1&page_size=100&search=${encodeURIComponent(searchTerm)}`);
+                const result = await response.json();
+                const items = result.data;
                 
                 const tbody = document.getElementById('itemsTableBody');
                 tbody.innerHTML = items.map(item => `
@@ -431,12 +432,12 @@
         }
         
         // 更新分页控件
-        function updatePagination(currentPage) {
+        function updatePagination(currentPage, totalPages) {
             const paginationDiv = document.getElementById('pagination');
             paginationDiv.innerHTML = '';
             
-            // 简单分页，实际应用中应该从API获取总页数
-            for (let i = 1; i <= 5; i++) {
+            // 使用API返回的总页数
+            for (let i = 1; i <= totalPages; i++) {
                 const button = document.createElement('button');
                 button.textContent = i;
                 button.className = i === currentPage ? 'active' : '';

@@ -2,20 +2,38 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
 from models.database import get_db
-from models.schemas import UserCreate, UserResponse, UserUpdate
+from models.schemas import UserCreate, UserResponse, UserUpdate, PaginatedResponse
 from models.database import User
 
 router = APIRouter()
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users", response_model=PaginatedResponse[UserResponse])
 async def get_users(
-    skip: int = Query(0, ge=0, description="跳过的记录数"),
-    limit: int = Query(10, ge=1, le=100, description="返回的最大记录数"),
+    page: int = Query(1, ge=1, description="当前页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页记录数"),
     db: Session = Depends(get_db)
 ):
     """获取用户列表（支持分页）"""
-    users = db.query(User).filter(User.is_active == True).offset(skip).limit(limit).all()
-    return users
+    # 计算总记录数
+    total = db.query(User).filter(User.is_active == True).count()
+    
+    # 计算总页数
+    total_pages = (total + page_size - 1) // page_size
+    
+    # 计算跳过的记录数
+    skip = (page - 1) * page_size
+    
+    # 查询数据
+    users = db.query(User).filter(User.is_active == True).offset(skip).limit(page_size).all()
+    
+    # 返回包含分页信息的响应
+    return PaginatedResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        data=users
+    )
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
