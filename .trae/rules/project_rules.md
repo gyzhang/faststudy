@@ -3,7 +3,9 @@
 ## 这是一个Python项目
 - 项目只在Windows11下开发测试运行
 - 项目使用Python 3.14
-- 项目的虚拟环境为 .venv
+- 我使用conda管理虚拟环境
+  - 我用命令 conda create -n faststudy python=3.14 为项目创建了一个名为 faststudy 的虚拟环境
+  - 激活本项目的虚拟环境：conda activate faststudy
 - 项目使用Poetry作为依赖管理工具
 - 项目使用SQLAlchemy作为ORM
 - 项目使用SQLite作为数据库
@@ -21,7 +23,7 @@
   - 项目只在Windows11下开发测试运行
   - 项目不支持在其他操作系统下运行
   - 只是用Windows11下的Powershell命令，不要用其他操作系统下的命令，特别是不要用Linux的命令
-  - 项目的虚拟环境必须为 .venv
+  - 项目的虚拟环境必须为 faststudy
   - 不要自作主张尝试其他命令启动项目或服务
 ## 项目编译的命令
 - 项目编译时，需要使用Poetry运行compile_project.py：`poetry run python compile_project.py`
