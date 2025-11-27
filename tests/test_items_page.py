@@ -18,11 +18,13 @@ class TestItemsPage:
         expect(page).to_have_title('物品管理 - FastAPI 学习项目')
         
         # 检查导航栏链接
-        expect(page.locator('.nav a')).to_have_count(4)
+        expect(page.locator('.nav a')).to_have_count(6)
         expect(page.locator('.nav a:nth-child(1)')).to_have_text('🏠 首页')
         expect(page.locator('.nav a:nth-child(2)')).to_have_text('👥 用户管理')
         expect(page.locator('.nav a:nth-child(3)')).to_have_text('📦 物品管理')
-        expect(page.locator('.nav a:nth-child(4)')).to_have_text('📖 API 文档')
+        expect(page.locator('.nav a:nth-child(4)')).to_have_text('🧠 LangChain')
+        expect(page.locator('.nav a:nth-child(5)')).to_have_text('🔄 LangGraph')
+        expect(page.locator('.nav a:nth-child(6)')).to_have_text('📖 API 文档')
         
         # 检查创建物品表单
         expect(page.locator('h2:has-text("创建新物品")')).to_be_visible()
