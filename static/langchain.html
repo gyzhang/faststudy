@@ -10,6 +10,7 @@
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -17,6 +18,7 @@
             padding: 20px;
             color: #333;
         }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -25,15 +27,18 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
         }
+        
         .header {
             background: #4a5568;
             color: white;
             padding: 20px;
             text-align: center;
         }
+        
         .header h1 {
             margin-bottom: 10px;
         }
+        
         .nav {
             background: #2d3748;
             padding: 10px;
@@ -41,6 +46,7 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+        
         .nav a {
             color: white;
             text-decoration: none;
@@ -48,44 +54,55 @@
             border-radius: 5px;
             transition: background 0.3s;
         }
+        
         .nav a:hover, .nav a.active {
             background: #4a5568;
         }
+        
         .content {
             padding: 20px;
         }
+        
         .section {
             margin-bottom: 30px;
             background: #f7fafc;
             padding: 20px;
             border-radius: 8px;
         }
+        
         .section h2 {
             margin-bottom: 15px;
             color: #2d3748;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 5px;
         }
+        
         .form-group {
             margin-bottom: 15px;
         }
+        
         .form-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-group input, .form-group textarea, .form-group select {
+        
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select {
             width: 100%;
             padding: 8px 12px;
             border: 1px solid #cbd5e0;
             border-radius: 5px;
             font-size: 14px;
         }
+        
         .form-group textarea {
             resize: vertical;
             min-height: 120px;
             font-family: inherit;
         }
+        
         .btn {
             padding: 10px 20px;
             border: none;
@@ -95,24 +112,21 @@
             font-weight: bold;
             transition: all 0.3s;
         }
+        
         .btn-primary {
             background: #4299e1;
             color: white;
         }
+        
         .btn-primary:hover {
             background: #3182ce;
         }
+        
         .btn-primary:disabled {
             background: #a0aec0;
             cursor: not-allowed;
         }
-        .btn-secondary {
-            background: #a0aec0;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #718096;
-        }
+        
         .result-box {
             margin-top: 20px;
             padding: 15px;
@@ -123,34 +137,30 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top-color: #4299e1;
-            animation: spin 1s ease-in-out infinite;
-        }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
         .tabs {
             display: flex;
             border-bottom: 1px solid #e2e8f0;
             margin-bottom: 20px;
         }
+        
         .tab {
             padding: 10px 20px;
             cursor: pointer;
             border-bottom: 2px solid transparent;
             transition: all 0.3s;
         }
+        
         .tab.active {
             border-bottom-color: #4299e1;
             color: #4299e1;
             font-weight: bold;
         }
+        
         .tab-content {
             display: none;
         }
@@ -170,24 +180,24 @@
             animation: spin 1s ease-in-out infinite;
         }
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
         .message {
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 15px;
         }
+        
         .message.success {
             background: #c6f6d5;
             color: #22543d;
             border: 1px solid #9ae6b4;
         }
+        
         .message.error {
             background: #fed7d7;
             color: #742a2a;
             border: 1px solid #feb2b2;
         }
+        
         .api-key-warning {
             background: #fffaf0;
             border: 1px solid #fbd38d;
@@ -196,11 +206,13 @@
             border-radius: 5px;
             margin-bottom: 15px;
         }
+        
         .api-key-form {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
         }
+        
         .api-key-form input {
             flex: 1;
         }
@@ -208,26 +220,26 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header class="header">
             <h1>🧠 LangChain 交互示例</h1>
             <p>学习和体验 LangChain 的强大功能</p>
-        </div>
+        </header>
         
-        <div class="nav">
+        <nav class="nav">
             <a href="/static/index.html">🏠 首页</a>
             <a href="/static/users.html">👥 用户管理</a>
             <a href="/static/items.html">📦 物品管理</a>
             <a href="/static/langchain.html" class="active">🧠 LangChain</a>
             <a href="/static/langgraph.html">🔄 LangGraph</a>
             <a href="/docs" target="_blank">📖 API 文档</a>
-        </div>
+        </nav>
         
-        <div class="content">
+        <main class="content">
             <!-- 消息显示区域 -->
             <div id="messageArea"></div>
             
             <!-- API Key 设置 -->
-            <div class="section">
+            <section class="section">
                 <h2>🔑 API Key 设置</h2>
                 <div class="api-key-warning">
                     注意：请输入您的 API Key 以使用 LangChain 功能。
@@ -237,10 +249,10 @@
                     <button class="btn btn-primary" onclick="saveApiKey()">保存</button>
                 </div>
                 <div id="apiKeyMessage"></div>
-            </div>
+            </section>
             
             <!-- 功能选项卡 -->
-            <div class="section">
+            <section class="section">
                 <div class="tabs">
                     <div class="tab active" onclick="switchTab('simple-llm-tab', event)">简单 LLM 调用</div>
                     <div class="tab" onclick="switchTab('simple-chain-tab', event)">简单链调用</div>
@@ -261,9 +273,9 @@
                         </select>
                     </div>
                     <button id="simpleLlm" class="btn btn-primary" onclick="runSimpleLlm()">
-                            <span id="simpleLlmText">运行 LLM</span>
-                            <span id="simpleLlmLoading" class="loading-spinner"></span>
-                        </button>
+                        <span id="simpleLlmText">运行 LLM</span>
+                        <span id="simpleLlmLoading" class="loading-spinner"></span>
+                    </button>
                     <div class="result-box" id="simpleLlmResult">结果将显示在这里...</div>
                 </div>
                 
@@ -274,9 +286,9 @@
                         <textarea id="simpleChainInput" placeholder="请输入您的问题或请求...">什么是 LangChain？请简要介绍它的主要功能。</textarea>
                     </div>
                     <button id="simpleChain" class="btn btn-primary" onclick="runSimpleChain()">
-                            <span id="simpleChainText">运行链</span>
-                            <span id="simpleChainLoading" class="loading-spinner"></span>
-                        </button>
+                        <span id="simpleChainText">运行链</span>
+                        <span id="simpleChainLoading" class="loading-spinner"></span>
+                    </button>
                     <div class="result-box" id="simpleChainResult">结果将显示在这里...</div>
                 </div>
                 
@@ -287,9 +299,9 @@
                         <textarea id="translationText" placeholder="请输入要翻译的文本...">LangChain 是一个用于构建 LLM 应用的强大框架，它提供了各种工具和组件，帮助开发者快速构建复杂的 AI 应用。</textarea>
                     </div>
                     <button id="translation" class="btn btn-primary" onclick="runTranslation()">
-                            <span id="translationButtonText">翻译</span>
-                            <span id="translationLoading" class="loading-spinner"></span>
-                        </button>
+                        <span id="translationButtonText">翻译</span>
+                        <span id="translationLoading" class="loading-spinner"></span>
+                    </button>
                     <div class="result-box" id="translationResult">翻译结果将显示在这里...</div>
                 </div>
                 
@@ -315,10 +327,10 @@
                     </div>
                     <div class="result-box" id="validationResult">验证结果将显示在这里...</div>
                 </div>
-            </div>
+            </section>
             
             <!-- 使用说明 -->
-            <div class="section">
+            <section class="section">
                 <h2>📚 使用说明</h2>
                 <ul style="margin-left: 20px; line-height: 1.6;">
                     <li>首先需要设置您的 API Key 才能使用这些功能</li>
@@ -328,26 +340,74 @@
                     <li>模型验证：验证 Qwen3-235B-MOE 模型是否可用</li>
                     <li>所有结果将实时显示在页面上</li>
                 </ul>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 
     <script>
+        // 配置常量
         const API_BASE = 'http://localhost:8000/api/v1';
+        
+        // 功能配置映射
+        const functionConfigs = {
+            simpleLlm: {
+                endpoint: '/langchain/simple-llm-stream',
+                buttonText: '运行 LLM',
+                textElementId: 'simpleLlmText',
+                loadingId: 'simpleLlmLoading',
+                resultId: 'simpleLlmResult',
+                getParams: () => ({
+                    prompt: document.getElementById('simpleLlmPrompt').value,
+                    model: document.getElementById('simpleLlmModel').value
+                }),
+                validateParams: (params) => params.prompt.trim()
+            },
+            simpleChain: {
+                endpoint: '/langchain/simple-chain-stream',
+                buttonText: '运行链',
+                textElementId: 'simpleChainText',
+                loadingId: 'simpleChainLoading',
+                resultId: 'simpleChainResult',
+                getParams: () => ({
+                    input: document.getElementById('simpleChainInput').value
+                }),
+                validateParams: (params) => params.input.trim()
+            },
+            translation: {
+                endpoint: '/langchain/translate-stream',
+                buttonText: '翻译',
+                textElementId: 'translationButtonText',
+                loadingId: 'translationLoading',
+                resultId: 'translationResult',
+                getParams: () => ({
+                    text: document.getElementById('translationText').value
+                }),
+                validateParams: (params) => params.text.trim()
+            },
+            validateModel: {
+                endpoint: '/model/validate-stream',
+                buttonText: '验证模型',
+                textElementId: 'validateModelText',
+                loadingId: 'validateModelLoading',
+                resultId: 'validationResult',
+                getParams: () => ({
+                    model: document.getElementById('modelToValidate').value,
+                    prompt: document.getElementById('validationPrompt').value
+                }),
+                validateParams: () => true
+            }
+        };
         
         // 切换选项卡
         function switchTab(tabId, event) {
-            // 隐藏所有内容
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             
-            // 移除所有选项卡的活动状态
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // 激活选中的选项卡和内容
             document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
         }
@@ -379,60 +439,19 @@
         }
         
         // 显示加载状态
-        function showLoading(buttonId, loadingId) {
-            document.getElementById(buttonId).disabled = true;
-            const textElementId = buttonId === 'translation' ? 'translationButtonText' : buttonId + 'Text';
-            document.getElementById(textElementId).textContent = '处理中...';
-            document.getElementById(loadingId).style.display = 'inline-block';
+        function showLoading(functionName) {
+            const config = functionConfigs[functionName];
+            document.getElementById(functionName).disabled = true;
+            document.getElementById(config.textElementId).textContent = '处理中...';
+            document.getElementById(config.loadingId).style.display = 'inline-block';
         }
         
         // 隐藏加载状态
-        function hideLoading(buttonId, loadingId) {
-            document.getElementById(buttonId).disabled = false;
-            const textElementId = buttonId === 'translation' ? 'translationButtonText' : buttonId + 'Text';
-            document.getElementById(textElementId).textContent = buttonId === 'simpleLlm' ? '运行 LLM' : 
-                                                                 buttonId === 'simpleChain' ? '运行链' : 
-                                                                 buttonId === 'translation' ? '翻译' : '验证模型';
-            document.getElementById(loadingId).style.display = 'none';
-        }
-        
-        // 模型验证功能
-        async function runModelValidation() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                showMessage('请先设置 API Key', 'error');
-                return;
-            }
-            
-            const model = document.getElementById('modelToValidate').value;
-            const prompt = document.getElementById('validationPrompt').value;
-            
-            showLoading('validateModel', 'validateModelLoading');
-            
-            try {
-                const response = await fetch(`${API_BASE}/model/validate-stream`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({ model, prompt })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'API 调用失败');
-                }
-                
-                // 处理流式响应
-                await handleStreamingResponse(response, 'validationResult');
-                showMessage('模型验证成功', 'success');
-            } catch (error) {
-                document.getElementById('validationResult').textContent = `错误: ${error.message}`;
-                showMessage(`错误: ${error.message}`, 'error');
-            } finally {
-                hideLoading('validateModel', 'validateModelLoading');
-            }
+        function hideLoading(functionName) {
+            const config = functionConfigs[functionName];
+            document.getElementById(functionName).disabled = false;
+            document.getElementById(config.textElementId).textContent = config.buttonText;
+            document.getElementById(config.loadingId).style.display = 'none';
         }
         
         // 通用的流式响应处理函数
@@ -445,9 +464,7 @@
             
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) {
-                    break;
-                }
+                if (done) break;
                 
                 const chunk = decoder.decode(value, { stream: true });
                 result += chunk;
@@ -455,126 +472,70 @@
             }
         }
         
-        // 简单 LLM 调用
+        // 通用的 API 调用函数
+        async function callApi(functionName) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showMessage('请先设置 API Key', 'error');
+                return;
+            }
+            
+            const config = functionConfigs[functionName];
+            const params = config.getParams();
+            
+            // 参数验证
+            if (!config.validateParams(params)) {
+                showMessage('请输入必要的参数', 'error');
+                return;
+            }
+            
+            showLoading(functionName);
+            
+            try {
+                const response = await fetch(`${API_BASE}${config.endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'API 调用失败');
+                }
+                
+                // 处理流式响应
+                await handleStreamingResponse(response, config.resultId);
+                
+                // 模型验证成功时显示额外消息
+                if (functionName === 'validateModel') {
+                    showMessage('模型验证成功', 'success');
+                }
+            } catch (error) {
+                document.getElementById(config.resultId).textContent = `错误: ${error.message}`;
+                showMessage(`错误: ${error.message}`, 'error');
+            } finally {
+                hideLoading(functionName);
+            }
+        }
+        
+        // 功能函数
         async function runSimpleLlm() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                showMessage('请先设置 API Key', 'error');
-                return;
-            }
-            
-            const prompt = document.getElementById('simpleLlmPrompt').value;
-            if (!prompt.trim()) {
-                showMessage('请输入提示词', 'error');
-                return;
-            }
-            
-            const model = document.getElementById('simpleLlmModel').value;
-            
-            showLoading('simpleLlm', 'simpleLlmLoading');
-            
-            try {
-                const response = await fetch(`${API_BASE}/langchain/simple-llm-stream`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({ prompt, model })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'API 调用失败');
-                }
-                
-                // 处理流式响应
-                await handleStreamingResponse(response, 'simpleLlmResult');
-            } catch (error) {
-                document.getElementById('simpleLlmResult').textContent = `错误: ${error.message}`;
-            } finally {
-                hideLoading('simpleLlm', 'simpleLlmLoading');
-            }
+            await callApi('simpleLlm');
         }
         
-        // 简单链调用
         async function runSimpleChain() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                showMessage('请先设置 API Key', 'error');
-                return;
-            }
-            
-            const inputText = document.getElementById('simpleChainInput').value;
-            if (!inputText.trim()) {
-                showMessage('请输入内容', 'error');
-                return;
-            }
-            
-            showLoading('simpleChain', 'simpleChainLoading');
-            
-            try {
-                const response = await fetch(`${API_BASE}/langchain/simple-chain-stream`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({ input: inputText })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'API 调用失败');
-                }
-                
-                // 处理流式响应
-                await handleStreamingResponse(response, 'simpleChainResult');
-            } catch (error) {
-                document.getElementById('simpleChainResult').textContent = `错误: ${error.message}`;
-            } finally {
-                hideLoading('simpleChain', 'simpleChainLoading');
-            }
+            await callApi('simpleChain');
         }
         
-        // 翻译功能
         async function runTranslation() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                showMessage('请先设置 API Key', 'error');
-                return;
-            }
-            
-            const text = document.getElementById('translationText').value;
-            if (!text.trim()) {
-                showMessage('请输入要翻译的文本', 'error');
-                return;
-            }
-            
-            showLoading('translation', 'translationLoading');
-            
-            try {
-                const response = await fetch(`${API_BASE}/langchain/translate-stream`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({ text })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'API 调用失败');
-                }
-                
-                // 处理流式响应
-                await handleStreamingResponse(response, 'translationResult');
-            } catch (error) {
-                document.getElementById('translationResult').textContent = `错误: ${error.message}`;
-            } finally {
-                hideLoading('translation', 'translationLoading');
-            }
+            await callApi('translation');
+        }
+        
+        async function runModelValidation() {
+            await callApi('validateModel');
         }
         
         // 页面加载时初始化
