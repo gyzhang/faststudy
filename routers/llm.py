@@ -15,7 +15,12 @@ try:
         simple_llm_call,
         run_simple_chain,
         translate_text,
-        validate_model
+        validate_model,
+        get_llm,
+        simple_llm_call_stream,
+        run_simple_chain_stream,
+        translate_text_stream,
+        validate_model_stream
     )
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -24,6 +29,11 @@ except ImportError:
     run_simple_chain = None
     translate_text = None
     validate_model = None
+    get_llm = None
+    simple_llm_call_stream = None
+    run_simple_chain_stream = None
+    translate_text_stream = None
+    validate_model_stream = None
 
 try:
     from examples.langgraph_example import (
@@ -123,6 +133,158 @@ async def langchain_simple_llm(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"LLM调用失败: {str(e)}"
         )
+
+
+@router.post("/langchain/simple-llm-stream", tags=["LangChain"])
+async def langchain_simple_llm_stream(
+    request: SimpleLLMRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    简单LLM调用（流式输出）
+    
+    Args:
+        request: 请求模型，包含提示词和模型名称
+        api_key: 认证令牌
+        
+    Returns:
+        StreamingResponse: 流式响应结果
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGCHAIN_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangChain 依赖未安装，请先安装依赖：poetry install"
+        )
+    
+    async def stream_response():
+        try:
+            # 使用stream方法获取流式响应
+            for chunk in simple_llm_call_stream(request.prompt, request.model, auth_token=api_key):
+                # 输出chunk内容
+                yield chunk
+                # 短暂延迟，模拟流式效果
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
+
+
+@router.post("/langchain/simple-chain-stream", tags=["LangChain"])
+async def langchain_simple_chain_stream(
+    request: SimpleChainRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    简单链调用（流式输出）
+    
+    Args:
+        request: 请求模型，包含输入文本
+        api_key: 认证令牌
+        
+    Returns:
+        StreamingResponse: 流式响应结果
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGCHAIN_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangChain 依赖未安装，请先安装依赖：poetry install"
+        )
+    
+    async def stream_response():
+        try:
+            # 使用stream方法获取流式响应
+            for chunk in run_simple_chain_stream(request.input, auth_token=api_key):
+                # 输出chunk内容
+                yield chunk
+                # 短暂延迟，模拟流式效果
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
+
+
+@router.post("/langchain/translate-stream", tags=["LangChain"])
+async def langchain_translate_stream(
+    request: TranslationRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    翻译功能（流式输出）
+    
+    Args:
+        request: 请求模型，包含要翻译的文本
+        api_key: 认证令牌
+        
+    Returns:
+        StreamingResponse: 流式响应结果
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGCHAIN_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangChain 依赖未安装，请先安装依赖：poetry install"
+        )
+    
+    async def stream_response():
+        try:
+            # 使用stream方法获取流式响应
+            for chunk in translate_text_stream(request.text, auth_token=api_key):
+                # 输出chunk内容
+                yield chunk
+                # 短暂延迟，模拟流式效果
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
+
+
+@router.post("/model/validate-stream", tags=["模型验证"])
+async def validate_llm_model_stream(
+    request: ModelValidationRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    验证模型是否可用（流式输出）
+    
+    Args:
+        request: 请求模型，包含测试提示词
+        api_key: 认证令牌 (API key)
+        
+    Returns:
+        StreamingResponse: 包含验证结果的流式响应
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGCHAIN_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="模型验证功能未可用，请确保依赖已正确安装"
+        )
+    
+    async def stream_response():
+        try:
+            # 使用stream方法获取流式响应
+            for chunk in validate_model_stream(api_key, request.prompt):
+                # 输出chunk内容
+                yield chunk
+                # 短暂延迟，模拟流式效果
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
 
 
 @router.post("/langchain/simple-chain", tags=["LangChain"])

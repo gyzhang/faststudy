@@ -6,9 +6,9 @@ LangGraph v1.0 示例代码
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
-from typing import Annotated, List, Dict, Any, Optional
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, AIMessageChunk
+from langchain_core.outputs import ChatGeneration, ChatResult, ChatGenerationChunk
+from typing import Annotated, List, Dict, Any, Optional, Iterator
 from typing_extensions import TypedDict
 import requests
 import json
@@ -130,6 +130,86 @@ class CustomChatModel(BaseChatModel):
             )
             
             return ChatResult(generations=[chat_generation])
+        else:
+            raise Exception(f"API请求失败: {response.status_code} - {response.text}")
+    
+    def _stream(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> Iterator[ChatGenerationChunk]:
+        """
+        流式生成响应
+        
+        Args:
+            messages: 消息列表
+            stop: 停止词列表
+            **kwargs: 其他参数
+            
+        Yields:
+            ChatGenerationChunk: 流式响应块
+        """
+        # 设置API端点
+        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+        
+        # 准备请求头
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.auth_token}"
+        }
+        
+        # 转换消息格式
+        api_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                api_messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, SystemMessage):
+                api_messages.append({"role": "system", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                api_messages.append({"role": "assistant", "content": msg.content})
+        
+        # 准备请求体
+        data = {
+            "model": "Qwen3-235B-MOE",
+            "messages": api_messages,
+            "temperature": self.temperature,
+            "max_tokens": 32768,
+            "stream": True
+        }
+        
+        # 发送请求
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(data),
+            stream=True
+        )
+        
+        # 处理响应
+        if response.status_code == 200:
+            # 逐行处理流式响应
+            for line in response.iter_lines():
+                if line:
+                    # 移除 "data: " 前缀
+                    line = line.decode("utf-8")
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    
+                    # 检查是否是结束标记
+                    if line == "[DONE]":
+                        break
+                    
+                    try:
+                        # 解析JSON
+                        result = json.loads(line)
+                        delta = result.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content", "")
+                        
+                        if content:
+                            # 创建 ChatGenerationChunk
+                            chunk = ChatGenerationChunk(
+                                message=AIMessageChunk(content=content),
+                                generation_info={"finish_reason": delta.get("finish_reason")}
+                            )
+                            yield chunk
+                    except json.JSONDecodeError:
+                        continue
         else:
             raise Exception(f"API请求失败: {response.status_code} - {response.text}")
     

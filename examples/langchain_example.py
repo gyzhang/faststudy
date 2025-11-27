@@ -6,9 +6,9 @@ LangChain 示例代码
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
-from typing import Optional, List, Dict, Any
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage, AIMessageChunk
+from langchain_core.outputs import ChatGeneration, ChatResult, ChatGenerationChunk
+from typing import Optional, List, Dict, Any, Iterator
 import requests
 import json
 
@@ -131,6 +131,86 @@ class CustomChatModel(BaseChatModel):
         else:
             raise Exception(f"API请求失败: {response.status_code} - {response.text}")
     
+    def _stream(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> Iterator[ChatGenerationChunk]:
+        """
+        流式生成响应
+        
+        Args:
+            messages: 消息列表
+            stop: 停止词列表
+            **kwargs: 其他参数
+            
+        Yields:
+            ChatGenerationChunk: 流式响应块
+        """
+        # 设置API端点
+        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+        
+        # 准备请求头
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.auth_token}"
+        }
+        
+        # 转换消息格式
+        api_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                api_messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, SystemMessage):
+                api_messages.append({"role": "system", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                api_messages.append({"role": "assistant", "content": msg.content})
+        
+        # 准备请求体
+        data = {
+            "model": "Qwen3-235B-MOE",
+            "messages": api_messages,
+            "temperature": self.temperature,
+            "max_tokens": 32768,
+            "stream": True
+        }
+        
+        # 发送请求
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(data),
+            stream=True
+        )
+        
+        # 处理响应
+        if response.status_code == 200:
+            # 逐行处理流式响应
+            for line in response.iter_lines():
+                if line:
+                    # 移除 "data: " 前缀
+                    line = line.decode("utf-8")
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    
+                    # 检查是否是结束标记
+                    if line == "[DONE]":
+                        break
+                    
+                    try:
+                        # 解析JSON
+                        result = json.loads(line)
+                        delta = result.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content", "")
+                        
+                        if content:
+                            # 创建 ChatGenerationChunk
+                            chunk = ChatGenerationChunk(
+                                message=AIMessageChunk(content=content),
+                                generation_info={"finish_reason": delta.get("finish_reason")}
+                            )
+                            yield chunk
+                    except json.JSONDecodeError:
+                        continue
+        else:
+            raise Exception(f"API请求失败: {response.status_code} - {response.text}")
+    
     @property
     def _llm_type(self) -> str:
         """
@@ -189,6 +269,23 @@ def simple_llm_call(prompt: str, model_name: str = "gpt-3.5-turbo", auth_token: 
     return response.content if hasattr(response, "content") else str(response)
 
 
+def simple_llm_call_stream(prompt: str, model_name: str = "gpt-3.5-turbo", auth_token: Optional[str] = None) -> Iterator[str]:
+    """
+    简单的 LLM 调用（流式输出）
+    
+    Args:
+        prompt: 提示词
+        model_name: 模型名称
+        auth_token: 认证令牌
+        
+    Yields:
+        str: LLM 响应的流式输出
+    """
+    llm = get_llm(model_name, auth_token=auth_token)
+    for chunk in llm.stream(prompt):
+        yield chunk.content if hasattr(chunk, "content") else str(chunk)
+
+
 def create_simple_chain(auth_token: Optional[str] = None):
     """
     创建简单的链
@@ -232,6 +329,22 @@ def run_simple_chain(input_text: str, auth_token: Optional[str] = None) -> str:
     return chain.invoke({"input": input_text})
 
 
+def run_simple_chain_stream(input_text: str, auth_token: Optional[str] = None) -> Iterator[str]:
+    """
+    运行简单的链（流式输出）
+    
+    Args:
+        input_text: 输入文本
+        auth_token: 认证令牌
+        
+    Yields:
+        str: 链的输出的流式输出
+    """
+    chain = create_simple_chain(auth_token=auth_token)
+    for chunk in chain.stream({"input": input_text}):
+        yield chunk
+
+
 def create_translation_chain(auth_token: Optional[str] = None):
     """
     创建翻译链
@@ -273,6 +386,22 @@ def translate_text(text: str, auth_token: Optional[str] = None) -> str:
     """
     translation_chain = create_translation_chain(auth_token=auth_token)
     return translation_chain.invoke({"text": text})
+
+
+def translate_text_stream(text: str, auth_token: Optional[str] = None) -> Iterator[str]:
+    """
+    翻译文本（流式输出）
+    
+    Args:
+        text: 要翻译的文本
+        auth_token: 认证令牌
+        
+    Yields:
+        str: 翻译后的文本的流式输出
+    """
+    translation_chain = create_translation_chain(auth_token=auth_token)
+    for chunk in translation_chain.stream({"text": text}):
+        yield chunk
 
 
 def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") -> dict:
@@ -333,6 +462,76 @@ def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") ->
             "error": f"请求过程中发生错误: {str(e)}",
             "content": str(e)
         }
+
+
+def validate_model_stream(auth_token: str, prompt: str = "介绍一下你自己。") -> Iterator[str]:
+    """
+    验证模型是否可用（流式输出）
+    
+    Args:
+        auth_token: 认证令牌 (API key)
+        prompt: 测试提示词
+        
+    Yields:
+        str: 模型响应的流式输出
+    """
+    try:
+        # 设置API端点
+        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+        
+        # 准备请求头
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}"
+        }
+        
+        # 准备请求体
+        data = {
+            "model": "Qwen3-235B-MOE",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 32768,
+            "stream": True
+        }
+        
+        # 发送请求
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(data),
+            stream=True
+        )
+        
+        # 处理响应
+        if response.status_code == 200:
+            # 逐行处理流式响应
+            for line in response.iter_lines():
+                if line:
+                    # 移除 "data: " 前缀
+                    line = line.decode("utf-8")
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    
+                    # 检查是否是结束标记
+                    if line == "[DONE]":
+                        break
+                    
+                    try:
+                        # 解析JSON
+                        result = json.loads(line)
+                        delta = result.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content", "")
+                        
+                        if content:
+                            yield content
+                    except json.JSONDecodeError:
+                        continue
+        else:
+            yield f"错误: API请求失败: {response.status_code} - {response.text}"
+    except Exception as e:
+        yield f"错误: 请求过程中发生错误: {str(e)}"
 
 
 if __name__ == "__main__":

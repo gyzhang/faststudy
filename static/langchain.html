@@ -410,7 +410,7 @@
             showLoading('validateModel', 'validateModelLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/model/validate`, {
+                const response = await fetch(`${API_BASE}/model/validate-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -424,19 +424,34 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                if (result.success) {
-                    document.getElementById('validationResult').textContent = `模型验证成功！\n\n响应内容：\n${result.content}`;
-                    showMessage('模型验证成功', 'success');
-                } else {
-                    document.getElementById('validationResult').textContent = `模型验证失败：${result.error || '未知错误'}`;
-                    showMessage('模型验证失败', 'error');
-                }
+                // 处理流式响应
+                await handleStreamingResponse(response, 'validationResult');
+                showMessage('模型验证成功', 'success');
             } catch (error) {
                 document.getElementById('validationResult').textContent = `错误: ${error.message}`;
                 showMessage(`错误: ${error.message}`, 'error');
             } finally {
                 hideLoading('validateModel', 'validateModelLoading');
+            }
+        }
+        
+        // 通用的流式响应处理函数
+        async function handleStreamingResponse(response, resultElementId) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let result = '';
+            const resultElement = document.getElementById(resultElementId);
+            resultElement.textContent = '';
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+                
+                const chunk = decoder.decode(value, { stream: true });
+                result += chunk;
+                resultElement.textContent = result;
             }
         }
         
@@ -459,7 +474,7 @@
             showLoading('simpleLlm', 'simpleLlmLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/langchain/simple-llm`, {
+                const response = await fetch(`${API_BASE}/langchain/simple-llm-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -473,8 +488,8 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                document.getElementById('simpleLlmResult').textContent = result.response;
+                // 处理流式响应
+                await handleStreamingResponse(response, 'simpleLlmResult');
             } catch (error) {
                 document.getElementById('simpleLlmResult').textContent = `错误: ${error.message}`;
             } finally {
@@ -499,7 +514,7 @@
             showLoading('simpleChain', 'simpleChainLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/langchain/simple-chain`, {
+                const response = await fetch(`${API_BASE}/langchain/simple-chain-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -513,8 +528,8 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                document.getElementById('simpleChainResult').textContent = result.response;
+                // 处理流式响应
+                await handleStreamingResponse(response, 'simpleChainResult');
             } catch (error) {
                 document.getElementById('simpleChainResult').textContent = `错误: ${error.message}`;
             } finally {
@@ -539,7 +554,7 @@
             showLoading('translation', 'translationLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/langchain/translate`, {
+                const response = await fetch(`${API_BASE}/langchain/translate-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -553,8 +568,8 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                document.getElementById('translationResult').textContent = result.translation;
+                // 处理流式响应
+                await handleStreamingResponse(response, 'translationResult');
             } catch (error) {
                 document.getElementById('translationResult').textContent = `错误: ${error.message}`;
             } finally {
