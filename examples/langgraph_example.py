@@ -5,9 +5,155 @@ LangGraph v1.0 示例代码
 
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
-from langchain_openai import ChatOpenAI
-from typing import Annotated
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from typing import Annotated, List, Dict, Any, Optional
 from typing_extensions import TypedDict
+import requests
+import json
+
+
+# 定义自定义ChatModel类
+class CustomChatModel(BaseChatModel):
+    """
+    自定义 ChatModel，用于调用外部 API
+    """
+    
+    def __init__(self, temperature: float = 0.7, auth_token: Optional[str] = None):
+        """
+        初始化自定义 ChatModel
+        
+        Args:
+            temperature: 温度参数
+            auth_token: 认证令牌
+        """
+        super().__init__()
+        self.temperature = temperature
+        self.auth_token = auth_token
+    
+    @property
+    def temperature(self) -> float:
+        """
+        温度参数
+        
+        Returns:
+            float: 温度参数
+        """
+        return self._temperature
+    
+    @temperature.setter
+    def temperature(self, value: float) -> None:
+        """
+        设置温度参数
+        
+        Args:
+            value: 温度参数
+        """
+        self._temperature = value
+    
+    @property
+    def auth_token(self) -> Optional[str]:
+        """
+        认证令牌
+        
+        Returns:
+            Optional[str]: 认证令牌
+        """
+        return self._auth_token
+    
+    @auth_token.setter
+    def auth_token(self, value: Optional[str]) -> None:
+        """
+        设置认证令牌
+        
+        Args:
+            value: 认证令牌
+        """
+        self._auth_token = value
+    
+    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> ChatResult:
+        """
+        生成响应
+        
+        Args:
+            messages: 消息列表
+            stop: 停止词列表
+            **kwargs: 其他参数
+            
+        Returns:
+            ChatResult: 响应结果
+        """
+        # 设置API端点
+        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+        
+        # 准备请求头
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.auth_token}"
+        }
+        
+        # 转换消息格式
+        api_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                api_messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, SystemMessage):
+                api_messages.append({"role": "system", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                api_messages.append({"role": "assistant", "content": msg.content})
+        
+        # 准备请求体
+        data = {
+            "model": "Qwen3-235B-MOE",
+            "messages": api_messages,
+            "temperature": self.temperature,
+            "max_tokens": 32768
+        }
+        
+        # 发送请求
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(data)
+        )
+        
+        # 处理响应
+        if response.status_code == 200:
+            result = response.json()
+            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            
+            # 创建 ChatResult
+            chat_generation = ChatGeneration(
+                message=AIMessage(content=content),
+                generation_info={"finish_reason": result.get("choices", [{}])[0].get("finish_reason", "stop")}
+            )
+            
+            return ChatResult(generations=[chat_generation])
+        else:
+            raise Exception(f"API请求失败: {response.status_code} - {response.text}")
+    
+    @property
+    def _llm_type(self) -> str:
+        """
+        LLM 类型
+        
+        Returns:
+            str: LLM 类型
+        """
+        return "custom_chat_model"
+    
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        """
+        识别参数
+        
+        Returns:
+            Dict[str, Any]: 识别参数
+        """
+        return {
+            "temperature": self.temperature
+        }
 
 
 # 定义状态结构
@@ -20,14 +166,15 @@ class State(TypedDict):
 class SimpleWorkflow:
     """简单的LangGraph工作流示例"""
     
-    def __init__(self, model_name: str = "gpt-3.5-turbo"):
+    def __init__(self, model_name: str = "gpt-3.5-turbo", auth_token: Optional[str] = None):
         """
         初始化工作流
         
         Args:
-            model_name: 模型名称
+            model_name: 模型名称（仅用于兼容）
+            auth_token: 认证令牌
         """
-        self.llm = ChatOpenAI(model_name=model_name)
+        self.llm = CustomChatModel(temperature=0.7, auth_token=auth_token)
         self.graph = self._build_graph()
         self.app = self.graph.compile()
     
@@ -117,14 +264,15 @@ class SimpleWorkflow:
 class DecisionWorkflow:
     """包含决策节点的LangGraph工作流示例"""
     
-    def __init__(self, model_name: str = "gpt-3.5-turbo"):
+    def __init__(self, model_name: str = "gpt-3.5-turbo", auth_token: Optional[str] = None):
         """
         初始化决策工作流
         
         Args:
-            model_name: 模型名称
+            model_name: 模型名称（仅用于兼容）
+            auth_token: 认证令牌
         """
-        self.llm = ChatOpenAI(model_name=model_name)
+        self.llm = CustomChatModel(temperature=0.7, auth_token=auth_token)
         self.graph = self._build_graph()
         self.app = self.graph.compile()
     
@@ -298,14 +446,15 @@ class DecisionWorkflow:
 class ConversationWorkflow:
     """简单的对话工作流示例"""
     
-    def __init__(self, model_name: str = "gpt-3.5-turbo"):
+    def __init__(self, model_name: str = "gpt-3.5-turbo", auth_token: Optional[str] = None):
         """
         初始化对话工作流
         
         Args:
-            model_name: 模型名称
+            model_name: 模型名称（仅用于兼容）
+            auth_token: 认证令牌
         """
-        self.llm = ChatOpenAI(model_name=model_name)
+        self.llm = CustomChatModel(temperature=0.7, auth_token=auth_token)
         self.graph = self._build_graph()
         self.app = self.graph.compile()
     
@@ -361,8 +510,84 @@ class ConversationWorkflow:
         return result
 
 
+
+def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") -> dict:
+    """
+    验证模型是否可用
+    
+    Args:
+        auth_token: 认证令牌 (API key)
+        prompt: 测试提示词
+        
+    Returns:
+        dict: 包含响应结果和状态信息
+    """
+    try:
+        # 设置API端点
+        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+        
+        # 准备请求头
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}"
+        }
+        
+        # 准备请求体
+        data = {
+            "model": "Qwen3-235B-MOE",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 32768
+        }
+        
+        # 发送请求
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(data)
+        )
+        
+        # 检查响应状态
+        if response.status_code == 200:
+            result = response.json()
+            return {
+                "success": True,
+                "content": result.get("choices", [{}])[0].get("message", {}).get("content", ""),
+                "response": result
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"API请求失败: {response.status_code}",
+                "content": response.text
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"请求过程中发生错误: {str(e)}",
+            "content": str(e)
+        }
+
+
 if __name__ == "__main__":
     print("=== LangGraph v1.0 示例 ===")
+    
+    # 新增: 模型验证功能测试
+    print("\n0. 模型验证功能测试:")
+    try:
+        # 注意：在实际使用时，应从环境变量或配置文件获取API key
+        # 这里仅作为示例，不要在实际代码中硬编码API key
+        auth_token = "ccc0f8df-cff1-42b8-97bc-10215051a500"  # 示例token
+        result = validate_model(auth_token)
+        if result["success"]:
+            print(f"模型验证成功！")
+            print(f"响应内容: {result['content'][:100]}...")
+        else:
+            print(f"模型验证失败: {result['error']}")
+    except Exception as e:
+        print(f"错误: {e}")
     
     # 示例1: 简单对话工作流
     print("\n1. 简单对话工作流:")

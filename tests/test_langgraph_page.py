@@ -27,7 +27,7 @@ class TestLangGraphPage:
         expect(page.locator('.nav a:nth-child(6)')).to_have_text('📖 API 文档')
         
         # 检查 API Key 设置区域
-        expect(page.locator('h2:has-text("🔑 OpenAI API Key 设置")')).to_be_visible()
+        expect(page.locator('h2:has-text("🔑 API Key 设置")')).to_be_visible()
         expect(page.locator('.api-key-warning')).to_be_visible()
         expect(page.locator('#apiKey')).to_be_visible()
         expect(page.locator('button:has-text("保存")')).to_be_visible()

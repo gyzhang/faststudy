@@ -27,20 +27,20 @@ class TestLangChainPage:
         expect(page.locator('.nav a:nth-child(6)')).to_have_text('📖 API 文档')
         
         # 检查 API Key 设置区域
-        expect(page.locator('h2:has-text("🔑 OpenAI API Key 设置")')).to_be_visible()
+        expect(page.locator('h2:has-text("🔑 API Key 设置")')).to_be_visible()
         expect(page.locator('.api-key-warning')).to_be_visible()
         expect(page.locator('#apiKey')).to_be_visible()
         expect(page.locator('button:has-text("保存")')).to_be_visible()
         
         # 检查功能选项卡
         expect(page.locator('.tabs')).to_be_visible()
-        expect(page.locator('.tab')).to_have_count(3)
+        expect(page.locator('.tab')).to_have_count(4)
         expect(page.locator('.tab:nth-child(1)')).to_have_text('简单 LLM 调用')
         expect(page.locator('.tab:nth-child(2)')).to_have_text('简单链调用')
         expect(page.locator('.tab:nth-child(3)')).to_have_text('翻译功能')
+        expect(page.locator('.tab:nth-child(4)')).to_have_text('模型验证')
         
         # 检查默认激活的选项卡内容
-        expect(page.locator('#simple-llm')).to_be_visible()
         expect(page.locator('#simpleLlmPrompt')).to_be_visible()
         expect(page.locator('#simpleLlmModel')).to_be_visible()
         expect(page.locator('button:has-text("运行 LLM")')).to_be_visible()
@@ -52,13 +52,17 @@ class TestLangChainPage:
         
         # 点击简单链调用选项卡
         page.click('.tab:nth-child(2)')
-        # 检查选项卡内容是否可见，而不是检查类
-        expect(page.locator('#simple-chain')).to_be_visible()
+        # 检查选项卡内容是否可见
+        expect(page.locator('#simpleChainInput')).to_be_visible()
         
         # 点击翻译功能选项卡
         page.click('.tab:nth-child(3)')
-        expect(page.locator('#translation')).to_be_visible()
+        expect(page.locator('#translationText')).to_be_visible()
+        
+        # 点击模型验证选项卡
+        page.click('.tab:nth-child(4)')
+        expect(page.locator('#modelToValidate')).to_be_visible()
         
         # 点击回简单 LLM 调用选项卡
         page.click('.tab:nth-child(1)')
-        expect(page.locator('#simple-llm')).to_be_visible()
+        expect(page.locator('#simpleLlmPrompt')).to_be_visible()

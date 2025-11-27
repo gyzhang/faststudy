@@ -154,8 +154,24 @@
         .tab-content {
             display: none;
         }
+        
         .tab-content.active {
             display: block;
+        }
+        
+        .loading-spinner {
+            display: none;
+            margin-left: 10px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         .message {
             padding: 10px;
@@ -207,14 +223,17 @@
         </div>
         
         <div class="content">
+            <!-- 消息显示区域 -->
+            <div id="messageArea"></div>
+            
             <!-- API Key 设置 -->
             <div class="section">
-                <h2>🔑 OpenAI API Key 设置</h2>
+                <h2>🔑 API Key 设置</h2>
                 <div class="api-key-warning">
-                    注意：请输入您的 OpenAI API Key 以使用 LangChain 功能。
+                    注意：请输入您的 API Key 以使用 LangChain 功能。
                 </div>
                 <div class="api-key-form">
-                    <input type="password" id="apiKey" placeholder="请输入您的 OpenAI API Key" value="">
+                    <input type="password" id="apiKey" placeholder="请输入您的 API Key" value="">
                     <button class="btn btn-primary" onclick="saveApiKey()">保存</button>
                 </div>
                 <div id="apiKeyMessage"></div>
@@ -223,13 +242,14 @@
             <!-- 功能选项卡 -->
             <div class="section">
                 <div class="tabs">
-                    <div class="tab active" onclick="switchTab('simple-llm')">简单 LLM 调用</div>
-                    <div class="tab" onclick="switchTab('simple-chain')">简单链调用</div>
-                    <div class="tab" onclick="switchTab('translation')">翻译功能</div>
+                    <div class="tab active" onclick="switchTab('simple-llm-tab', event)">简单 LLM 调用</div>
+                    <div class="tab" onclick="switchTab('simple-chain-tab', event)">简单链调用</div>
+                    <div class="tab" onclick="switchTab('translation-tab', event)">翻译功能</div>
+                    <div class="tab" onclick="switchTab('model-validation-tab', event)">模型验证</div>
                 </div>
                 
                 <!-- 简单 LLM 调用 -->
-                <div id="simple-llm" class="tab-content active">
+                <div id="simple-llm-tab" class="tab-content active">
                     <div class="form-group">
                         <label for="simpleLlmPrompt">提示词：</label>
                         <textarea id="simpleLlmPrompt" placeholder="请输入您的提示词...">你好，请简要介绍一下你自己。</textarea>
@@ -237,41 +257,63 @@
                     <div class="form-group">
                         <label for="simpleLlmModel">选择模型：</label>
                         <select id="simpleLlmModel">
-                            <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                            <option value="gpt-4">gpt-4</option>
+                            <option value="Qwen3-235B-MOE">Qwen3-235B-MOE</option>
                         </select>
                     </div>
-                    <button class="btn btn-primary" onclick="runSimpleLlm()">
-                        <span id="simpleLlmButtonText">运行 LLM</span>
-                        <span id="simpleLlmLoading" class="loading" style="display: none;"></span>
-                    </button>
+                    <button id="simpleLlm" class="btn btn-primary" onclick="runSimpleLlm()">
+                            <span id="simpleLlmText">运行 LLM</span>
+                            <span id="simpleLlmLoading" class="loading-spinner"></span>
+                        </button>
                     <div class="result-box" id="simpleLlmResult">结果将显示在这里...</div>
                 </div>
                 
                 <!-- 简单链调用 -->
-                <div id="simple-chain" class="tab-content">
+                <div id="simple-chain-tab" class="tab-content">
                     <div class="form-group">
                         <label for="simpleChainInput">输入内容：</label>
                         <textarea id="simpleChainInput" placeholder="请输入您的问题或请求...">什么是 LangChain？请简要介绍它的主要功能。</textarea>
                     </div>
-                    <button class="btn btn-primary" onclick="runSimpleChain()">
-                        <span id="simpleChainButtonText">运行链</span>
-                        <span id="simpleChainLoading" class="loading" style="display: none;"></span>
-                    </button>
+                    <button id="simpleChain" class="btn btn-primary" onclick="runSimpleChain()">
+                            <span id="simpleChainText">运行链</span>
+                            <span id="simpleChainLoading" class="loading-spinner"></span>
+                        </button>
                     <div class="result-box" id="simpleChainResult">结果将显示在这里...</div>
                 </div>
                 
                 <!-- 翻译功能 -->
-                <div id="translation" class="tab-content">
+                <div id="translation-tab" class="tab-content">
                     <div class="form-group">
                         <label for="translationText">要翻译的文本：</label>
                         <textarea id="translationText" placeholder="请输入要翻译的文本...">LangChain 是一个用于构建 LLM 应用的强大框架，它提供了各种工具和组件，帮助开发者快速构建复杂的 AI 应用。</textarea>
                     </div>
-                    <button class="btn btn-primary" onclick="runTranslation()">
-                        <span id="translationButtonText">翻译</span>
-                        <span id="translationLoading" class="loading" style="display: none;"></span>
-                    </button>
+                    <button id="translation" class="btn btn-primary" onclick="runTranslation()">
+                            <span id="translationButtonText">翻译</span>
+                            <span id="translationLoading" class="loading-spinner"></span>
+                        </button>
                     <div class="result-box" id="translationResult">翻译结果将显示在这里...</div>
+                </div>
+                
+                <!-- 模型验证 -->
+                <div id="model-validation-tab" class="tab-content">
+                    <h2>模型验证</h2>
+                    <div class="form-group">
+                        <label for="modelToValidate">选择模型：</label>
+                        <select id="modelToValidate">
+                            <option value="Qwen3-235B-MOE">Qwen3-235B-MOE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="validationPrompt">验证提示词（可选）：</label>
+                        <input type="text" id="validationPrompt" value="介绍一下你自己。" placeholder="请输入验证提示词...">
+                    </div>
+                    <button id="validateModel" class="btn btn-primary" onclick="runModelValidation()">
+                        <span id="validateModelText">验证模型</span>
+                        <span id="validateModelLoading" class="loading-spinner"></span>
+                    </button>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>验证结果：</label>
+                    </div>
+                    <div class="result-box" id="validationResult">验证结果将显示在这里...</div>
                 </div>
             </div>
             
@@ -279,10 +321,11 @@
             <div class="section">
                 <h2>📚 使用说明</h2>
                 <ul style="margin-left: 20px; line-height: 1.6;">
-                    <li>首先需要设置您的 OpenAI API Key 才能使用这些功能</li>
+                    <li>首先需要设置您的 API Key 才能使用这些功能</li>
                     <li>简单 LLM 调用：直接调用 LLM 模型，适合简单的问答场景</li>
                     <li>简单链调用：使用 LangChain 的链功能，结合提示词模板和输出解析器</li>
                     <li>翻译功能：使用专门的翻译链将中文文本翻译成英文</li>
+                    <li>模型验证：验证 Qwen3-235B-MOE 模型是否可用</li>
                     <li>所有结果将实时显示在页面上</li>
                 </ul>
             </div>
@@ -290,10 +333,10 @@
     </div>
 
     <script>
-        const API_BASE = '/api/v1';
+        const API_BASE = 'http://localhost:8000/api/v1';
         
         // 切换选项卡
-        function switchTab(tabId) {
+        function switchTab(tabId, event) {
             // 隐藏所有内容
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -338,16 +381,63 @@
         // 显示加载状态
         function showLoading(buttonId, loadingId) {
             document.getElementById(buttonId).disabled = true;
-            document.getElementById(buttonId + 'Text').textContent = '处理中...';
+            const textElementId = buttonId === 'translation' ? 'translationButtonText' : buttonId + 'Text';
+            document.getElementById(textElementId).textContent = '处理中...';
             document.getElementById(loadingId).style.display = 'inline-block';
         }
         
         // 隐藏加载状态
         function hideLoading(buttonId, loadingId) {
             document.getElementById(buttonId).disabled = false;
-            document.getElementById(buttonId + 'Text').textContent = buttonId === 'simpleLlm' ? '运行 LLM' : 
-                                                                     buttonId === 'simpleChain' ? '运行链' : '翻译';
+            const textElementId = buttonId === 'translation' ? 'translationButtonText' : buttonId + 'Text';
+            document.getElementById(textElementId).textContent = buttonId === 'simpleLlm' ? '运行 LLM' : 
+                                                                 buttonId === 'simpleChain' ? '运行链' : 
+                                                                 buttonId === 'translation' ? '翻译' : '验证模型';
             document.getElementById(loadingId).style.display = 'none';
+        }
+        
+        // 模型验证功能
+        async function runModelValidation() {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showMessage('请先设置 API Key', 'error');
+                return;
+            }
+            
+            const model = document.getElementById('modelToValidate').value;
+            const prompt = document.getElementById('validationPrompt').value;
+            
+            showLoading('validateModel', 'validateModelLoading');
+            
+            try {
+                const response = await fetch(`${API_BASE}/model/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ model, prompt })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'API 调用失败');
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('validationResult').textContent = `模型验证成功！\n\n响应内容：\n${result.content}`;
+                    showMessage('模型验证成功', 'success');
+                } else {
+                    document.getElementById('validationResult').textContent = `模型验证失败：${result.error || '未知错误'}`;
+                    showMessage('模型验证失败', 'error');
+                }
+            } catch (error) {
+                document.getElementById('validationResult').textContent = `错误: ${error.message}`;
+                showMessage(`错误: ${error.message}`, 'error');
+            } finally {
+                hideLoading('validateModel', 'validateModelLoading');
+            }
         }
         
         // 简单 LLM 调用

@@ -161,8 +161,24 @@
         .tab-content {
             display: none;
         }
+        
         .tab-content.active {
             display: block;
+        }
+        
+        .loading-spinner {
+            display: none;
+            margin-left: 10px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         .message {
             padding: 10px;
@@ -269,25 +285,29 @@
         </div>
         
         <div class="content">
+            <!-- 消息显示区域 -->
+            <div id="messageArea"></div>
+            
             <!-- API Key 设置 -->
             <div class="section">
-                <h2>🔑 OpenAI API Key 设置</h2>
+                <h2>🔑 API Key 设置</h2>
                 <div class="api-key-warning">
-                    注意：请输入您的 OpenAI API Key 以使用 LangGraph 功能。
+                    注意：请输入您的 API Key 以使用 LangGraph 功能。
                 </div>
                 <div class="api-key-form">
-                    <input type="password" id="apiKey" placeholder="请输入您的 OpenAI API Key" value="">
+                    <input type="password" id="apiKey" placeholder="请输入您的 API Key" value="">
                     <button class="btn btn-primary" onclick="saveApiKey()">保存</button>
                 </div>
                 <div id="apiKeyMessage"></div>
             </div>
             
             <!-- 功能选项卡 -->
-            <div class="section">
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab('conversation')">对话工作流</div>
-                    <div class="tab" onclick="switchTab('decision')">决策工作流</div>
-                </div>
+                <div class="section">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('conversation', event)">对话工作流</div>
+                        <div class="tab" onclick="switchTab('decision', event)">决策工作流</div>
+                        <div class="tab" onclick="switchTab('model-validation-tab', event)">模型验证</div>
+                    </div>
                 
                 <!-- 对话工作流 -->
                 <div id="conversation" class="tab-content active">
@@ -304,6 +324,29 @@
                             <span id="conversationLoading" class="loading" style="display: none;"></span>
                         </button>
                         <button class="btn btn-secondary" onclick="clearConversation()">清除历史</button>
+                    </div>
+                    
+                    <!-- 模型验证 -->
+                    <div id="model-validation-tab" class="tab-content">
+                        <h2>模型验证</h2>
+                        <div class="form-group">
+                            <label for="modelToValidate">选择模型：</label>
+                            <select id="modelToValidate">
+                                <option value="Qwen3-235B-MOE">Qwen3-235B-MOE</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="validationPrompt">验证提示词（可选）：</label>
+                            <input type="text" id="validationPrompt" value="介绍一下你自己。" placeholder="请输入验证提示词...">
+                        </div>
+                        <button id="validateModel" class="btn btn-primary" onclick="runModelValidation()">
+                            <span id="validateModelText">验证模型</span>
+                            <span id="validateModelLoading" class="loading-spinner"></span>
+                        </button>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>验证结果：</label>
+                        </div>
+                        <div class="result-box" id="validationResult">验证结果将显示在这里...</div>
                     </div>
                 </div>
                 
@@ -333,7 +376,7 @@
             <div class="section">
                 <h2>📚 使用说明</h2>
                 <ul style="margin-left: 20px; line-height: 1.6;">
-                    <li>首先需要设置您的 OpenAI API Key 才能使用这些功能</li>
+                    <li>首先需要设置您的 API Key 才能使用这些功能</li>
                     <li>对话工作流：与 AI 进行多轮对话，支持上下文记忆</li>
                     <li>决策工作流：根据输入类型自动路由到不同处理节点
                         <ul style="margin-left: 20px; margin-top: 5px;">
@@ -342,6 +385,7 @@
                             <li>总结：总结输入的文本内容</li>
                         </ul>
                     </li>
+                    <li>模型验证：验证 Qwen3-235B-MOE 模型是否可用</li>
                     <li>所有结果将实时显示在页面上</li>
                 </ul>
             </div>
@@ -349,12 +393,12 @@
     </div>
 
     <script>
-        const API_BASE = '/api/v1';
+        const API_BASE = 'http://localhost:8000/api/v1';
         let currentWorkflowType = 'question';
         let conversationHistory = [];
         
         // 切换选项卡
-        function switchTab(tabId) {
+        function switchTab(tabId, event) {
             // 隐藏所有内容
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -406,8 +450,62 @@
         // 隐藏加载状态
         function hideLoading(buttonId, loadingId) {
             document.getElementById(buttonId).disabled = false;
-            document.getElementById(buttonId + 'ButtonText').textContent = buttonId === 'conversation' ? '发送消息' : '运行工作流';
+            if (buttonId === 'conversation') {
+                document.getElementById(buttonId + 'ButtonText').textContent = '发送消息';
+            } else if (buttonId === 'decision') {
+                document.getElementById(buttonId + 'ButtonText').textContent = '运行工作流';
+            } else if (buttonId === 'validateModel') {
+                document.getElementById(buttonId + 'Text').textContent = '验证模型';
+            }
             document.getElementById(loadingId).style.display = 'none';
+        }
+        
+        // 模型验证功能
+        async function runModelValidation() {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showMessage('请先设置 API Key', 'error');
+                return;
+            }
+            
+            const model = document.getElementById('modelToValidate').value;
+            const prompt = document.getElementById('validationPrompt').value;
+            
+            document.getElementById('validateModel').disabled = true;
+            document.getElementById('validateModelText').textContent = '验证中...';
+            document.getElementById('validateModelLoading').style.display = 'inline-block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/model/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ model, prompt })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'API 调用失败');
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('validationResult').textContent = `模型验证成功！\n\n响应内容：\n${result.content}`;
+                    showMessage('模型验证成功', 'success');
+                } else {
+                    document.getElementById('validationResult').textContent = `模型验证失败：${result.error || '未知错误'}`;
+                    showMessage('模型验证失败', 'error');
+                }
+            } catch (error) {
+                document.getElementById('validationResult').textContent = `错误: ${error.message}`;
+                showMessage(`错误: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('validateModel').disabled = false;
+                document.getElementById('validateModelText').textContent = '验证模型';
+                document.getElementById('validateModelLoading').style.display = 'none';
+            }
         }
         
         // 设置工作流类型

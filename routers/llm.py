@@ -14,7 +14,8 @@ try:
     from examples.langchain_example import (
         simple_llm_call,
         run_simple_chain,
-        translate_text
+        translate_text,
+        validate_model
     )
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -22,6 +23,7 @@ except ImportError:
     simple_llm_call = None
     run_simple_chain = None
     translate_text = None
+    validate_model = None
 
 try:
     from examples.langgraph_example import (
@@ -62,6 +64,11 @@ class DecisionRequest(BaseModel):
     input: str = Field(..., description="输入内容")
 
 
+class ModelValidationRequest(BaseModel):
+    """模型验证请求模型"""
+    prompt: str = Field(default="介绍一下你自己。", description="测试提示词")
+
+
 # 辅助函数：获取API Key
 def get_api_key(authorization: str = Header(...)):
     """
@@ -95,7 +102,7 @@ async def langchain_simple_llm(
     
     Args:
         request: 请求模型，包含提示词和模型名称
-        api_key: OpenAI API Key
+        api_key: 认证令牌
         
     Returns:
         dict: 包含响应结果
@@ -107,27 +114,11 @@ async def langchain_simple_llm(
         )
     
     try:
-        # 设置环境变量
-        original_api_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = api_key
+        # 调用LLM，直接传递auth_token
+        response = simple_llm_call(request.prompt, request.model, auth_token=api_key)
         
-        # 调用LLM
-        response = simple_llm_call(request.prompt, request.model)
-        
-        # 恢复原始环境变量
-        if original_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = original_api_key
-        else:
-            del os.environ["OPENAI_API_KEY"]
-        
-        return {"response": response.content if hasattr(response, "content") else str(response)}
+        return {"response": response}
     except Exception as e:
-        # 恢复原始环境变量
-        if "OPENAI_API_KEY" in os.environ:
-            if original_api_key is not None:
-                os.environ["OPENAI_API_KEY"] = original_api_key
-            else:
-                del os.environ["OPENAI_API_KEY"]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"LLM调用失败: {str(e)}"
@@ -144,7 +135,7 @@ async def langchain_simple_chain(
     
     Args:
         request: 请求模型，包含输入文本
-        api_key: OpenAI API Key
+        api_key: 认证令牌
         
     Returns:
         dict: 包含响应结果
@@ -156,27 +147,11 @@ async def langchain_simple_chain(
         )
     
     try:
-        # 设置环境变量
-        original_api_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = api_key
-        
-        # 调用链
-        response = run_simple_chain(request.input)
-        
-        # 恢复原始环境变量
-        if original_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = original_api_key
-        else:
-            del os.environ["OPENAI_API_KEY"]
+        # 调用链，直接传递auth_token
+        response = run_simple_chain(request.input, auth_token=api_key)
         
         return {"response": response}
     except Exception as e:
-        # 恢复原始环境变量
-        if "OPENAI_API_KEY" in os.environ:
-            if original_api_key is not None:
-                os.environ["OPENAI_API_KEY"] = original_api_key
-            else:
-                del os.environ["OPENAI_API_KEY"]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"链调用失败: {str(e)}"
@@ -193,7 +168,7 @@ async def langchain_translate(
     
     Args:
         request: 请求模型，包含要翻译的文本
-        api_key: OpenAI API Key
+        api_key: 认证令牌
         
     Returns:
         dict: 包含翻译结果
@@ -205,27 +180,11 @@ async def langchain_translate(
         )
     
     try:
-        # 设置环境变量
-        original_api_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = api_key
-        
-        # 调用翻译功能
-        translation = translate_text(request.text)
-        
-        # 恢复原始环境变量
-        if original_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = original_api_key
-        else:
-            del os.environ["OPENAI_API_KEY"]
+        # 调用翻译功能，直接传递auth_token
+        translation = translate_text(request.text, auth_token=api_key)
         
         return {"translation": translation}
     except Exception as e:
-        # 恢复原始环境变量
-        if "OPENAI_API_KEY" in os.environ:
-            if original_api_key is not None:
-                os.environ["OPENAI_API_KEY"] = original_api_key
-            else:
-                del os.environ["OPENAI_API_KEY"]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"翻译失败: {str(e)}"
@@ -243,7 +202,7 @@ async def langgraph_conversation(
     
     Args:
         request: 请求模型，包含对话消息列表
-        api_key: OpenAI API Key
+        api_key: 认证令牌
         
     Returns:
         dict: 包含对话响应
@@ -255,31 +214,15 @@ async def langgraph_conversation(
         )
     
     try:
-        # 设置环境变量
-        original_api_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = api_key
-        
         # 转换消息格式
         messages = [(msg["role"], msg["content"]) for msg in request.messages]
         
-        # 创建并运行对话工作流
-        workflow = ConversationWorkflow()
+        # 创建并运行对话工作流，传递auth_token
+        workflow = ConversationWorkflow(auth_token=api_key)
         result = workflow.run(messages)
-        
-        # 恢复原始环境变量
-        if original_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = original_api_key
-        else:
-            del os.environ["OPENAI_API_KEY"]
         
         return {"response": result["messages"][-1].content}
     except Exception as e:
-        # 恢复原始环境变量
-        if "OPENAI_API_KEY" in os.environ:
-            if original_api_key is not None:
-                os.environ["OPENAI_API_KEY"] = original_api_key
-            else:
-                del os.environ["OPENAI_API_KEY"]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"对话工作流失败: {str(e)}"
@@ -296,7 +239,7 @@ async def langgraph_decision(
     
     Args:
         request: 请求模型，包含输入内容
-        api_key: OpenAI API Key
+        api_key: 认证令牌
         
     Returns:
         dict: 包含决策结果
@@ -308,29 +251,62 @@ async def langgraph_decision(
         )
     
     try:
-        # 设置环境变量
-        original_api_key = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = api_key
-        
-        # 创建并运行决策工作流
-        workflow = DecisionWorkflow()
+        # 创建并运行决策工作流，传递auth_token
+        workflow = DecisionWorkflow(auth_token=api_key)
         result = workflow.run(request.input)
-        
-        # 恢复原始环境变量
-        if original_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = original_api_key
-        else:
-            del os.environ["OPENAI_API_KEY"]
         
         return {"response": result["messages"][-1].content}
     except Exception as e:
-        # 恢复原始环境变量
-        if "OPENAI_API_KEY" in os.environ:
-            if original_api_key is not None:
-                os.environ["OPENAI_API_KEY"] = original_api_key
-            else:
-                del os.environ["OPENAI_API_KEY"]
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"决策工作流失败: {str(e)}"
+        )
+
+
+# 模型验证相关路由
+@router.post("/model/validate", tags=["模型验证"])
+async def validate_llm_model(
+    request: ModelValidationRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    验证模型是否可用
+    
+    Args:
+        request: 请求模型，包含测试提示词
+        api_key: 认证令牌 (API key)
+        
+    Returns:
+        dict: 包含验证结果
+    """
+    if validate_model is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="模型验证功能未可用，请确保依赖已正确安装"
+        )
+    
+    try:
+        # 直接调用模型验证函数
+        result = validate_model(api_key, request.prompt)
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "content": result["content"],
+                "message": "模型验证成功"
+            }
+        else:
+            # 验证失败时，返回400错误，便于前端处理
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"],
+                headers={"X-Validation-Error": result.get("content", "")}
+            )
+    except HTTPException:
+        # 重新抛出HTTPException，保留原始状态码和详情
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"模型验证过程中发生错误: {str(e)}"
         )
