@@ -13,6 +13,101 @@ from typing_extensions import TypedDict
 import requests
 import json
 
+# 配置常量
+API_ENDPOINT = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
+DEFAULT_MODEL = "Qwen3-235B-MOE"
+DEFAULT_TEMPERATURE = 0.7
+DEFAULT_MAX_TOKENS = 32768
+DEFAULT_VALIDATION_PROMPT = "介绍一下你自己。"
+
+
+# 辅助函数
+def _prepare_api_request(messages: List[Dict[str, str]], auth_token: str, temperature: float = DEFAULT_TEMPERATURE, 
+                        stream: bool = False, max_tokens: int = DEFAULT_MAX_TOKENS) -> Dict[str, Any]:
+    """
+    准备API请求
+    
+    Args:
+        messages: 消息列表
+        auth_token: 认证令牌
+        temperature: 温度参数
+        stream: 是否使用流式响应
+        max_tokens: 最大令牌数
+        
+    Returns:
+        Dict[str, Any]: 包含headers和data的字典
+    """
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {auth_token}"
+    }
+    
+    data = {
+        "model": DEFAULT_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": stream
+    }
+    
+    return {"headers": headers, "data": data}
+
+
+def _convert_messages_to_api_format(messages: List[BaseMessage]) -> List[Dict[str, str]]:
+    """
+    将LangChain消息转换为API格式
+    
+    Args:
+        messages: LangChain消息列表
+        
+    Returns:
+        List[Dict[str, str]]: API格式的消息列表
+    """
+    api_messages = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            api_messages.append({"role": "user", "content": msg.content})
+        elif isinstance(msg, SystemMessage):
+            api_messages.append({"role": "system", "content": msg.content})
+        elif isinstance(msg, AIMessage):
+            api_messages.append({"role": "assistant", "content": msg.content})
+        elif isinstance(msg, AIMessageChunk):
+            api_messages.append({"role": "assistant", "content": msg.content})
+    return api_messages
+
+
+def _process_stream_response(response: requests.Response) -> Iterator[str]:
+    """
+    处理流式响应
+    
+    Args:
+        response: requests响应对象
+        
+    Yields:
+        str: 流式响应内容
+    """
+    for line in response.iter_lines():
+        if line:
+            # 移除 "data: " 前缀
+            line = line.decode("utf-8")
+            if line.startswith("data: "):
+                line = line[6:]
+            
+            # 检查是否是结束标记
+            if line == "[DONE]":
+                break
+            
+            try:
+                # 解析JSON
+                result = json.loads(line)
+                delta = result.get("choices", [{}])[0].get("delta", {})
+                content = delta.get("content", "")
+                
+                if content:
+                    yield content
+            except json.JSONDecodeError:
+                continue
+
 
 # 定义自定义ChatModel类
 class CustomChatModel(BaseChatModel):
@@ -20,7 +115,7 @@ class CustomChatModel(BaseChatModel):
     自定义 ChatModel，用于调用外部 API
     """
     
-    def __init__(self, temperature: float = 0.7, auth_token: Optional[str] = None):
+    def __init__(self, temperature: float = DEFAULT_TEMPERATURE, auth_token: Optional[str] = None):
         """
         初始化自定义 ChatModel
         
@@ -29,8 +124,8 @@ class CustomChatModel(BaseChatModel):
             auth_token: 认证令牌
         """
         super().__init__()
-        self.temperature = temperature
-        self.auth_token = auth_token
+        self._temperature = temperature
+        self._auth_token = auth_token
     
     @property
     def temperature(self) -> float:
@@ -84,38 +179,22 @@ class CustomChatModel(BaseChatModel):
         Returns:
             ChatResult: 响应结果
         """
-        # 设置API端点
-        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
-        
-        # 准备请求头
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.auth_token}"
-        }
-        
         # 转换消息格式
-        api_messages = []
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                api_messages.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, SystemMessage):
-                api_messages.append({"role": "system", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                api_messages.append({"role": "assistant", "content": msg.content})
+        api_messages = _convert_messages_to_api_format(messages)
         
-        # 准备请求体
-        data = {
-            "model": "Qwen3-235B-MOE",
-            "messages": api_messages,
-            "temperature": self.temperature,
-            "max_tokens": 32768
-        }
+        # 准备API请求
+        request_data = _prepare_api_request(
+            api_messages, 
+            self.auth_token, 
+            temperature=self.temperature,
+            stream=False
+        )
         
         # 发送请求
         response = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(data)
+            API_ENDPOINT,
+            headers=request_data["headers"],
+            data=json.dumps(request_data["data"])
         )
         
         # 处理响应
@@ -145,71 +224,35 @@ class CustomChatModel(BaseChatModel):
         Yields:
             ChatGenerationChunk: 流式响应块
         """
-        # 设置API端点
-        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
-        
-        # 准备请求头
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.auth_token}"
-        }
-        
         # 转换消息格式
-        api_messages = []
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                api_messages.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, SystemMessage):
-                api_messages.append({"role": "system", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                api_messages.append({"role": "assistant", "content": msg.content})
+        api_messages = _convert_messages_to_api_format(messages)
         
-        # 准备请求体
-        data = {
-            "model": "Qwen3-235B-MOE",
-            "messages": api_messages,
-            "temperature": self.temperature,
-            "max_tokens": 32768,
-            "stream": True
-        }
+        # 准备API请求
+        request_data = _prepare_api_request(
+            api_messages, 
+            self.auth_token, 
+            temperature=self.temperature,
+            stream=True
+        )
         
         # 发送请求
         response = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(data),
+            API_ENDPOINT,
+            headers=request_data["headers"],
+            data=json.dumps(request_data["data"]),
             stream=True
         )
         
         # 处理响应
         if response.status_code == 200:
             # 逐行处理流式响应
-            for line in response.iter_lines():
-                if line:
-                    # 移除 "data: " 前缀
-                    line = line.decode("utf-8")
-                    if line.startswith("data: "):
-                        line = line[6:]
-                    
-                    # 检查是否是结束标记
-                    if line == "[DONE]":
-                        break
-                    
-                    try:
-                        # 解析JSON
-                        result = json.loads(line)
-                        delta = result.get("choices", [{}])[0].get("delta", {})
-                        content = delta.get("content", "")
-                        
-                        if content:
-                            # 创建 ChatGenerationChunk
-                            chunk = ChatGenerationChunk(
-                                message=AIMessageChunk(content=content),
-                                generation_info={"finish_reason": delta.get("finish_reason")}
-                            )
-                            yield chunk
-                    except json.JSONDecodeError:
-                        continue
+            for content in _process_stream_response(response):
+                # 创建 ChatGenerationChunk
+                chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=content),
+                    generation_info={}
+                )
+                yield chunk
         else:
             raise Exception(f"API请求失败: {response.status_code} - {response.text}")
     
@@ -338,6 +381,22 @@ class SimpleWorkflow:
         })
         
         return result
+    
+    def stream(self, user_input: str) -> Iterator[Dict[str, Any]]:
+        """
+        流式运行工作流
+        
+        Args:
+            user_input: 用户输入
+            
+        Yields:
+            Iterator[Dict[str, Any]]: 工作流执行结果的流式输出
+        """
+        # 流式运行工作流
+        for chunk in self.app.stream({
+            "messages": [("user", user_input)]
+        }):
+            yield chunk
 
 
 # 定义一个更复杂的工作流示例
@@ -520,6 +579,22 @@ class DecisionWorkflow:
         })
         
         return result
+    
+    def stream(self, user_input: str) -> Iterator[Dict[str, Any]]:
+        """
+        流式运行决策工作流
+        
+        Args:
+            user_input: 用户输入
+            
+        Yields:
+            Iterator[Dict[str, Any]]: 工作流执行结果的流式输出
+        """
+        # 流式运行工作流
+        for chunk in self.app.stream({
+            "messages": [("user", user_input)]
+        }):
+            yield chunk
 
 
 # 简单的对话工作流
@@ -572,6 +647,25 @@ class ConversationWorkflow:
         
         return {"messages": [response]}
     
+    def _chat_stream(self, state: State):
+        """
+        对话节点（流式输出）
+        
+        Args:
+            state: 当前状态
+            
+        Yields:
+            dict: 更新后的状态
+        """
+        # 生成流式响应
+        response_chunks = []
+        for chunk in self.llm.stream(state["messages"]):
+            response_chunks.append(chunk)
+            # 合并所有chunk内容
+            full_content = "".join([c.content for c in response_chunks if hasattr(c, "content")])
+            # 返回更新后的状态
+            yield {"messages": [AIMessage(content=full_content)]}
+    
     def run(self, messages: list):
         """
         运行对话工作流
@@ -588,10 +682,26 @@ class ConversationWorkflow:
         })
         
         return result
+    
+    def stream(self, messages: list) -> Iterator[Dict[str, Any]]:
+        """
+        流式运行对话工作流
+        
+        Args:
+            messages: 对话消息列表
+            
+        Yields:
+            Iterator[Dict[str, Any]]: 工作流执行结果的流式输出
+        """
+        # 流式运行工作流
+        for chunk in self.app.stream({
+            "messages": messages
+        }):
+            yield chunk
 
 
 
-def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") -> dict:
+def validate_model(auth_token: str, prompt: str = DEFAULT_VALIDATION_PROMPT) -> dict:
     """
     验证模型是否可用
     
@@ -603,9 +713,6 @@ def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") ->
         dict: 包含响应结果和状态信息
     """
     try:
-        # 设置API端点
-        url = "http://10.62.79.254:31111/api/inference/v1/chat/completions"
-        
         # 准备请求头
         headers = {
             "Content-Type": "application/json",
@@ -614,17 +721,17 @@ def validate_model(auth_token: str, prompt: str = "介绍一下你自己。") ->
         
         # 准备请求体
         data = {
-            "model": "Qwen3-235B-MOE",
+            "model": DEFAULT_MODEL,
             "messages": [
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 0.7,
-            "max_tokens": 32768
+            "temperature": DEFAULT_TEMPERATURE,
+            "max_tokens": DEFAULT_MAX_TOKENS
         }
         
         # 发送请求
         response = requests.post(
-            url,
+            API_ENDPOINT,
             headers=headers,
             data=json.dumps(data)
         )

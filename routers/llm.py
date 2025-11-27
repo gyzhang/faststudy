@@ -391,6 +391,58 @@ async def langgraph_conversation(
         )
 
 
+@router.post("/langgraph/conversation-stream", tags=["LangGraph"])
+async def langgraph_conversation_stream(
+    request: ConversationRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    对话工作流（流式输出）
+    
+    Args:
+        request: 请求模型，包含对话消息列表
+        api_key: 认证令牌
+        
+    Returns:
+        StreamingResponse: 流式响应结果
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGGRAPH_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangGraph 依赖未安装，请先安装依赖：poetry install"
+        )
+    
+    async def stream_response():
+        try:
+            # 转换消息格式
+            messages = [(msg["role"], msg["content"]) for msg in request.messages]
+            
+            # 创建并运行对话工作流，传递auth_token
+            workflow = ConversationWorkflow(auth_token=api_key)
+            
+            # 直接使用LLM的stream方法，而不是通过workflow.stream
+            llm = workflow.llm
+            
+            # 流式生成响应
+            for chunk in llm.stream(messages):
+                if hasattr(chunk, "content") and chunk.content:
+                    # 确保换行符被正确处理
+                    content = chunk.content
+                    # 替换思考过程的标签，使其更美观
+                    content = content.replace("<think>", "\n<think>")
+                    content = content.replace("</think>", "</think>\n")
+                    yield content
+                    # 短暂延迟，模拟流式效果
+                    await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
+
+
 @router.post("/langgraph/decision", tags=["LangGraph"])
 async def langgraph_decision(
     request: DecisionRequest,
@@ -423,6 +475,61 @@ async def langgraph_decision(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"决策工作流失败: {str(e)}"
         )
+
+
+@router.post("/langgraph/decision-stream", tags=["LangGraph"])
+async def langgraph_decision_stream(
+    request: DecisionRequest,
+    api_key: str = Depends(get_api_key)
+):
+    """
+    决策工作流（流式输出）
+    
+    Args:
+        request: 请求模型，包含输入内容
+        api_key: 认证令牌
+        
+    Returns:
+        StreamingResponse: 流式响应结果
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if not LANGGRAPH_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangGraph 依赖未安装，请先安装依赖：poetry install"
+        )
+    
+    async def stream_response():
+        try:
+            # 创建并运行决策工作流，传递auth_token
+            workflow = DecisionWorkflow(auth_token=api_key)
+            
+            # 直接使用LLM的stream方法，而不是通过workflow.stream
+            llm = workflow.llm
+            
+            # 构建消息列表
+            messages = [
+                ("system", "你是一个 helpful 的助手。请用中文回答。"),
+                ("user", request.input)
+            ]
+            
+            # 流式生成响应
+            for chunk in llm.stream(messages):
+                if hasattr(chunk, "content") and chunk.content:
+                    # 确保换行符被正确处理
+                    content = chunk.content
+                    # 替换思考过程的标签，使其更美观
+                    content = content.replace("<think>", "\n<think>")
+                    content = content.replace("</think>", "</think>\n")
+                    yield content
+                    # 短暂延迟，模拟流式效果
+                    await asyncio.sleep(0.01)
+        except Exception as e:
+            yield f"错误: {str(e)}"
+    
+    return StreamingResponse(stream_response(), media_type="text/plain")
 
 
 # 模型验证相关路由

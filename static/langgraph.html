@@ -325,29 +325,29 @@
                         </button>
                         <button class="btn btn-secondary" onclick="clearConversation()">清除历史</button>
                     </div>
-                    
-                    <!-- 模型验证 -->
-                    <div id="model-validation-tab" class="tab-content">
-                        <h2>模型验证</h2>
-                        <div class="form-group">
-                            <label for="modelToValidate">选择模型：</label>
-                            <select id="modelToValidate">
-                                <option value="Qwen3-235B-MOE">Qwen3-235B-MOE</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="validationPrompt">验证提示词（可选）：</label>
-                            <input type="text" id="validationPrompt" value="介绍一下你自己。" placeholder="请输入验证提示词...">
-                        </div>
-                        <button id="validateModel" class="btn btn-primary" onclick="runModelValidation()">
-                            <span id="validateModelText">验证模型</span>
-                            <span id="validateModelLoading" class="loading-spinner"></span>
-                        </button>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>验证结果：</label>
-                        </div>
-                        <div class="result-box" id="validationResult">验证结果将显示在这里...</div>
+                </div>
+                
+                <!-- 模型验证 -->
+                <div id="model-validation-tab" class="tab-content">
+                    <h2>模型验证</h2>
+                    <div class="form-group">
+                        <label for="modelToValidate">选择模型：</label>
+                        <select id="modelToValidate">
+                            <option value="Qwen3-235B-MOE">Qwen3-235B-MOE</option>
+                        </select>
                     </div>
+                    <div class="form-group">
+                        <label for="validationPrompt">验证提示词（可选）：</label>
+                        <input type="text" id="validationPrompt" value="介绍一下你自己。" placeholder="请输入验证提示词...">
+                    </div>
+                    <button id="validateModel" class="btn btn-primary" onclick="runModelValidation()">
+                        <span id="validateModelText">验证模型</span>
+                        <span id="validateModelLoading" class="loading-spinner"></span>
+                    </button>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>验证结果：</label>
+                    </div>
+                    <div class="result-box" id="validationResult">验证结果将显示在这里...</div>
                 </div>
                 
                 <!-- 决策工作流 -->
@@ -471,18 +471,23 @@
             const model = document.getElementById('modelToValidate').value;
             const prompt = document.getElementById('validationPrompt').value;
             
+            // 显示加载状态
             document.getElementById('validateModel').disabled = true;
             document.getElementById('validateModelText').textContent = '验证中...';
             document.getElementById('validateModelLoading').style.display = 'inline-block';
             
             try {
-                const response = await fetch(`${API_BASE}/model/validate`, {
+                // 清空之前的结果
+                const resultBox = document.getElementById('validationResult');
+                resultBox.textContent = '';
+                
+                const response = await fetch(`${API_BASE}/model/validate-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
-                    body: JSON.stringify({ model, prompt })
+                    body: JSON.stringify({ prompt })
                 });
                 
                 if (!response.ok) {
@@ -490,18 +495,22 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                if (result.success) {
-                    document.getElementById('validationResult').textContent = `模型验证成功！\n\n响应内容：\n${result.content}`;
-                    showMessage('模型验证成功', 'success');
-                } else {
-                    document.getElementById('validationResult').textContent = `模型验证失败：${result.error || '未知错误'}`;
-                    showMessage('模型验证失败', 'error');
-                }
+                // 处理流式响应
+                await processStreamResponse(response, 
+                    (chunk, fullText) => {
+                        // 更新结果框
+                        resultBox.textContent = fullText;
+                    },
+                    (fullText) => {
+                        // 流式响应完成，显示成功消息
+                        showMessage('模型验证成功', 'success');
+                    }
+                );
             } catch (error) {
                 document.getElementById('validationResult').textContent = `错误: ${error.message}`;
                 showMessage(`错误: ${error.message}`, 'error');
             } finally {
+                // 隐藏加载状态
                 document.getElementById('validateModel').disabled = false;
                 document.getElementById('validateModelText').textContent = '验证模型';
                 document.getElementById('validateModelLoading').style.display = 'none';
@@ -529,6 +538,25 @@
             }
         }
         
+        // 处理流式响应
+        async function processStreamResponse(response, onChunk, onComplete) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let result = '';
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    onComplete(result);
+                    break;
+                }
+                
+                const chunk = decoder.decode(value, { stream: true });
+                result += chunk;
+                onChunk(chunk, result);
+            }
+        }
+        
         // 运行对话工作流
         async function runConversation() {
             const apiKey = getApiKey();
@@ -550,7 +578,10 @@
             showLoading('conversation', 'conversationLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/langgraph/conversation`, {
+                // 添加一个空的助手消息，用于实时更新
+                const assistantMessageDiv = addMessageToHistory('assistant', '');
+                
+                const response = await fetch(`${API_BASE}/langgraph/conversation-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -564,11 +595,19 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                const assistantMessage = result.response;
-                
-                // 添加助手消息到历史
-                addMessageToHistory('assistant', assistantMessage);
+                // 处理流式响应
+                await processStreamResponse(response, 
+                    (chunk, fullText) => {
+                        // 更新助手消息，使用formatText处理换行和Markdown
+                        assistantMessageDiv.innerHTML = formatText(fullText);
+                        // 滚动到底部
+                        document.getElementById('conversationHistory').scrollTop = document.getElementById('conversationHistory').scrollHeight;
+                    },
+                    (fullText) => {
+                        // 流式响应完成，更新对话历史
+                        conversationHistory.push({ role: 'assistant', content: fullText });
+                    }
+                );
             } catch (error) {
                 addMessageToHistory('system', `错误: ${error.message}`);
             } finally {
@@ -576,18 +615,45 @@
             }
         }
         
+        // 格式化文本，处理换行和基本Markdown
+        function formatText(text) {
+            // 处理换行符
+            text = text.replace(/\n/g, '<br>');
+            // 处理基本的Markdown标题
+            text = text.replace(/^###\s+(.*$)/gm, '<h3>$1</h3>');
+            text = text.replace(/^##\s+(.*$)/gm, '<h2>$1</h2>');
+            text = text.replace(/^#\s+(.*$)/gm, '<h1>$1</h1>');
+            // 处理分隔线
+            text = text.replace(/^---$/gm, '<hr>');
+            // 处理列表项
+            text = text.replace(/^-\s+(.*$)/gm, '<li>$1</li>');
+            // 处理有序列表
+            text = text.replace(/^\d+\.\s+(.*$)/gm, '<li>$1</li>');
+            // 处理加粗
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // 处理斜体
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            return text;
+        }
+        
         // 添加消息到历史
         function addMessageToHistory(role, content) {
-            conversationHistory.push({ role, content });
+            // 只有在非流式更新时才添加到conversationHistory
+            if (role !== 'assistant' || content !== '') {
+                conversationHistory.push({ role, content });
+            }
             
             const historyDiv = document.getElementById('conversationHistory');
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${role}`;
-            messageDiv.textContent = content;
+            // 使用innerHTML而不是textContent，支持HTML渲染
+            messageDiv.innerHTML = formatText(content);
             historyDiv.appendChild(messageDiv);
             
             // 滚动到底部
             historyDiv.scrollTop = historyDiv.scrollHeight;
+            
+            return messageDiv;
         }
         
         // 清除对话历史
@@ -613,7 +679,11 @@
             showLoading('decision', 'decisionLoading');
             
             try {
-                const response = await fetch(`${API_BASE}/langgraph/decision`, {
+                // 清空之前的结果
+                const resultBox = document.getElementById('decisionResult');
+                resultBox.textContent = '';
+                
+                const response = await fetch(`${API_BASE}/langgraph/decision-stream`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -627,8 +697,16 @@
                     throw new Error(error.detail || 'API 调用失败');
                 }
                 
-                const result = await response.json();
-                document.getElementById('decisionResult').textContent = result.response;
+                // 处理流式响应
+                await processStreamResponse(response, 
+                    (chunk, fullText) => {
+                        // 更新结果框
+                        resultBox.textContent = fullText;
+                    },
+                    (fullText) => {
+                        // 流式响应完成，无需额外操作
+                    }
+                );
             } catch (error) {
                 document.getElementById('decisionResult').textContent = `错误: ${error.message}`;
             } finally {
