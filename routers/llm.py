@@ -503,29 +503,62 @@ async def langgraph_decision_stream(
     
     async def stream_response():
         try:
-            # 创建并运行决策工作流，传递auth_token
+            # 创建决策工作流，传递auth_token
             workflow = DecisionWorkflow(auth_token=api_key)
             
-            # 直接使用LLM的stream方法，而不是通过workflow.stream
-            llm = workflow.llm
-            
-            # 构建消息列表
-            messages = [
-                ("system", "你是一个 helpful 的助手。请用中文回答。"),
+            # 先进行分类
+            classification = workflow.llm.invoke([
+                ("system", "请将用户输入分类为以下类型之一：question（问题）、translate（翻译请求）、summarize（总结请求）。只返回类型名称，不要返回其他内容。"),
                 ("user", request.input)
-            ]
+            ])
             
-            # 流式生成响应
-            for chunk in llm.stream(messages):
-                if hasattr(chunk, "content") and chunk.content:
-                    # 确保换行符被正确处理
-                    content = chunk.content
-                    # 替换思考过程的标签，使其更美观
-                    content = content.replace("<think>", "\n<think>")
-                    content = content.replace("</think>", "</think>\n")
-                    yield content
-                    # 短暂延迟，模拟流式效果
-                    await asyncio.sleep(0.01)
+            classification_result = classification.content.lower().strip()
+            
+            # 根据分类结果执行相应的处理
+            if classification_result == "summarize":
+                # 提取需要总结的文本（移除"总结"等关键词）
+                import re
+                text_to_summarize = re.sub(r'^(总结|summarize)[:：]?\s*', '', request.input, flags=re.IGNORECASE)
+                
+                # 构建总结提示
+                summarize_messages = [
+                    ("system", "请总结用户输入的文本，保持简洁明了。"),
+                    ("user", text_to_summarize)
+                ]
+                
+                # 流式生成总结
+                for chunk in workflow.llm.stream(summarize_messages):
+                    if hasattr(chunk, "content") and chunk.content:
+                        yield chunk.content
+                        await asyncio.sleep(0.01)
+            elif classification_result == "translate":
+                # 提取需要翻译的文本（移除"翻译"等关键词）
+                import re
+                text_to_translate = re.sub(r'^(翻译|translate)[:：]?\s*', '', request.input, flags=re.IGNORECASE)
+                
+                # 构建翻译提示
+                translate_messages = [
+                    ("system", "请将用户输入的文本翻译成英文。"),
+                    ("user", text_to_translate)
+                ]
+                
+                # 流式生成翻译
+                for chunk in workflow.llm.stream(translate_messages):
+                    if hasattr(chunk, "content") and chunk.content:
+                        yield chunk.content
+                        await asyncio.sleep(0.01)
+            else:  # question
+                # 构建回答提示
+                answer_messages = [
+                    ("system", "你是一个 helpful 的助手。请用中文回答用户的问题。"),
+                    ("user", request.input)
+                ]
+                
+                # 流式生成回答
+                for chunk in workflow.llm.stream(answer_messages):
+                    if hasattr(chunk, "content") and chunk.content:
+                        yield chunk.content
+                        await asyncio.sleep(0.01)
         except Exception as e:
             yield f"错误: {str(e)}"
     

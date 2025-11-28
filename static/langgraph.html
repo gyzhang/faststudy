@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LangGraph v1.0 交互示例 - FastAPI 学习项目</title>
+    <!-- 引入 marked.js 库用于 markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 mermaid.js 库用于图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        // 初始化 mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
     <style>
         * {
             margin: 0;
@@ -127,7 +139,6 @@
             border: 1px solid #bee3f8;
             border-radius: 5px;
             min-height: 100px;
-            white-space: pre-wrap;
             word-break: break-word;
         }
         .loading {
@@ -266,6 +277,123 @@
             color: white;
             border-color: #4299e1;
         }
+        
+        /* Markdown 样式 */
+        .markdown-content {
+            line-height: 1.6;
+        }
+        
+        .markdown-content h1 {
+            font-size: 2em;
+            margin: 0.67em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.5em;
+            margin: 0.83em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.17em;
+            margin: 1em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content h4 {
+            font-size: 1em;
+            margin: 1.33em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content h5 {
+            font-size: 0.83em;
+            margin: 1.67em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content h6 {
+            font-size: 0.67em;
+            margin: 2.33em 0;
+            color: #2d3748;
+        }
+        
+        .markdown-content p {
+            margin: 1em 0;
+        }
+        
+        .markdown-content ul, 
+        .markdown-content ol {
+            margin: 1em 0;
+            padding-left: 2em;
+        }
+        
+        .markdown-content li {
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content blockquote {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            background: #f1f5f9;
+            border-left: 4px solid #cbd5e0;
+            color: #475569;
+        }
+        
+        .markdown-content code {
+            background: #f1f5f9;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .markdown-content pre {
+            background: #f1f5f9;
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+        
+        .markdown-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        
+        .markdown-content th, 
+        .markdown-content td {
+            border: 1px solid #cbd5e0;
+            padding: 0.5em;
+            text-align: left;
+        }
+        
+        .markdown-content th {
+            background: #f1f5f9;
+            font-weight: bold;
+        }
+        
+        .markdown-content a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+        
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 1em 0;
+        }
     </style>
 </head>
 <body>
@@ -397,6 +525,41 @@
         let currentWorkflowType = 'question';
         let conversationHistory = [];
         
+        // 配置 marked.js 以正确处理 mermaid 代码块
+        marked.use({
+            renderer: {
+                code(code, infostring) {
+                    if (infostring === 'mermaid') {
+                        return `<div class="mermaid">${code}</div>`;
+                    }
+                    // 默认代码块处理
+                    return `<pre><code class="language-${infostring || ''}">${code}</code></pre>`;
+                }
+            }
+        });
+        
+        // 确保 marked.parse 返回字符串
+        function safeMarkedParse(text) {
+            try {
+                const result = marked.parse(text);
+                return typeof result === 'string' ? result : String(result);
+            } catch (error) {
+                console.error('Markdown 解析失败:', error);
+                return text;
+            }
+        }
+        
+        // 渲染 mermaid 图表
+        function renderMermaidCharts(container) {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.run({
+                    nodes: container.querySelectorAll('.mermaid')
+                }).catch(error => {
+                    console.error('Mermaid 渲染失败:', error);
+                });
+            }
+        }
+        
         // 切换选项卡
         function switchTab(tabId, event) {
             // 隐藏所有内容
@@ -479,7 +642,9 @@
             try {
                 // 清空之前的结果
                 const resultBox = document.getElementById('validationResult');
-                resultBox.textContent = '';
+                // 添加 markdown-content 类以应用 markdown 样式
+                resultBox.className = 'result-box markdown-content';
+                resultBox.innerHTML = '';
                 
                 const response = await fetch(`${API_BASE}/model/validate-stream`, {
                     method: 'POST',
@@ -498,16 +663,20 @@
                 // 处理流式响应
                 await processStreamResponse(response, 
                     (chunk, fullText) => {
-                        // 更新结果框
-                        resultBox.textContent = fullText;
+                        // 更新结果框，使用 safeMarkedParse 处理 markdown
+                        resultBox.innerHTML = safeMarkedParse(fullText);
                     },
                     (fullText) => {
                         // 流式响应完成，显示成功消息
                         showMessage('模型验证成功', 'success');
+                        // 渲染 mermaid 图表
+                        renderMermaidCharts(resultBox);
                     }
                 );
             } catch (error) {
-                document.getElementById('validationResult').textContent = `错误: ${error.message}`;
+                const resultBox = document.getElementById('validationResult');
+                resultBox.className = 'result-box markdown-content';
+                resultBox.innerHTML = `错误: ${error.message}`;
                 showMessage(`错误: ${error.message}`, 'error');
             } finally {
                 // 隐藏加载状态
@@ -598,14 +767,16 @@
                 // 处理流式响应
                 await processStreamResponse(response, 
                     (chunk, fullText) => {
-                        // 更新助手消息，使用formatText处理换行和Markdown
-                        assistantMessageDiv.innerHTML = formatText(fullText);
+                        // 更新助手消息，使用 safeMarkedParse 处理 markdown
+                        assistantMessageDiv.innerHTML = safeMarkedParse(fullText);
                         // 滚动到底部
                         document.getElementById('conversationHistory').scrollTop = document.getElementById('conversationHistory').scrollHeight;
                     },
                     (fullText) => {
                         // 流式响应完成，更新对话历史
                         conversationHistory.push({ role: 'assistant', content: fullText });
+                        // 渲染 mermaid 图表
+                        renderMermaidCharts(assistantMessageDiv);
                     }
                 );
             } catch (error) {
@@ -613,27 +784,6 @@
             } finally {
                 hideLoading('conversation', 'conversationLoading');
             }
-        }
-        
-        // 格式化文本，处理换行和基本Markdown
-        function formatText(text) {
-            // 处理换行符
-            text = text.replace(/\n/g, '<br>');
-            // 处理基本的Markdown标题
-            text = text.replace(/^###\s+(.*$)/gm, '<h3>$1</h3>');
-            text = text.replace(/^##\s+(.*$)/gm, '<h2>$1</h2>');
-            text = text.replace(/^#\s+(.*$)/gm, '<h1>$1</h1>');
-            // 处理分隔线
-            text = text.replace(/^---$/gm, '<hr>');
-            // 处理列表项
-            text = text.replace(/^-\s+(.*$)/gm, '<li>$1</li>');
-            // 处理有序列表
-            text = text.replace(/^\d+\.\s+(.*$)/gm, '<li>$1</li>');
-            // 处理加粗
-            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            // 处理斜体
-            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            return text;
         }
         
         // 添加消息到历史
@@ -646,12 +796,17 @@
             const historyDiv = document.getElementById('conversationHistory');
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${role}`;
-            // 使用innerHTML而不是textContent，支持HTML渲染
-            messageDiv.innerHTML = formatText(content);
+            // 使用 safeMarkedParse 处理 markdown
+            messageDiv.innerHTML = safeMarkedParse(content);
             historyDiv.appendChild(messageDiv);
             
             // 滚动到底部
             historyDiv.scrollTop = historyDiv.scrollHeight;
+            
+            // 渲染 mermaid 图表（如果有）
+            if (content) {
+                renderMermaidCharts(messageDiv);
+            }
             
             return messageDiv;
         }
@@ -681,7 +836,9 @@
             try {
                 // 清空之前的结果
                 const resultBox = document.getElementById('decisionResult');
-                resultBox.textContent = '';
+                // 添加 markdown-content 类以应用 markdown 样式
+                resultBox.className = 'result-box markdown-content';
+                resultBox.innerHTML = '';
                 
                 const response = await fetch(`${API_BASE}/langgraph/decision-stream`, {
                     method: 'POST',
@@ -700,15 +857,18 @@
                 // 处理流式响应
                 await processStreamResponse(response, 
                     (chunk, fullText) => {
-                        // 更新结果框
-                        resultBox.textContent = fullText;
+                        // 更新结果框，使用 safeMarkedParse 处理 markdown
+                        resultBox.innerHTML = safeMarkedParse(fullText);
                     },
                     (fullText) => {
-                        // 流式响应完成，无需额外操作
+                        // 流式响应完成，渲染 mermaid 图表
+                        renderMermaidCharts(resultBox);
                     }
                 );
             } catch (error) {
-                document.getElementById('decisionResult').textContent = `错误: ${error.message}`;
+                const resultBox = document.getElementById('decisionResult');
+                resultBox.className = 'result-box markdown-content';
+                resultBox.innerHTML = `错误: ${error.message}`;
             } finally {
                 hideLoading('decision', 'decisionLoading');
             }
