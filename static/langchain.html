@@ -6,6 +6,16 @@
     <title>LangChain 交互示例 - FastAPI 学习项目</title>
     <!-- 引入 marked.js 库用于 markdown 渲染 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 mermaid.js 库用于图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        // 初始化 mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
     <style>
         * {
             margin: 0;
@@ -572,6 +582,31 @@
             document.getElementById(config.loadingId).style.display = 'none';
         }
         
+        // 配置 marked.js 以正确处理 mermaid 代码块
+        marked.use({
+            extensions: [{
+                name: 'mermaid',
+                level: 'block',
+                start(src) {
+                    return src.match(/^```mermaid/)?.index;
+                },
+                tokenizer(src) {
+                    const rule = /^```mermaid\n([\s\S]*?)```/;
+                    const match = rule.exec(src);
+                    if (match) {
+                        return {
+                            type: 'mermaid',
+                            raw: match[0],
+                            text: match[1].trim()
+                        };
+                    }
+                },
+                renderer(token) {
+                    return `<div class="mermaid">${token.text}</div>`;
+                }
+            }]
+        });
+        
         // 通用的流式响应处理函数
         async function handleStreamingResponse(response, resultElementId) {
             const reader = response.body.getReader();
@@ -590,6 +625,21 @@
                 result += chunk;
                 // 将 markdown 转换为 HTML 并显示
                 resultElement.innerHTML = marked.parse(result);
+            }
+            
+            // 渲染 mermaid 图表
+            if (typeof mermaid !== 'undefined') {
+                // 使用 setTimeout 确保 DOM 已更新
+                setTimeout(() => {
+                    const mermaidElements = resultElement.querySelectorAll('.mermaid');
+                    if (mermaidElements.length > 0) {
+                        mermaid.run({
+                            nodes: mermaidElements
+                        }).catch(error => {
+                            console.error('Mermaid 渲染失败:', error);
+                        });
+                    }
+                }, 0);
             }
         }
         
